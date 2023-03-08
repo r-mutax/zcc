@@ -1,5 +1,4 @@
 const std = @import("std");
-const err = @import("error.zig");
 const Tokenizer = @This();
 
 const expect = std.testing.expect;
