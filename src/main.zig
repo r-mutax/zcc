@@ -1,6 +1,24 @@
 const std = @import("std");
 
+
 pub fn main() !void {
+    const args = std.os.argv;
+    if (args.len != 2) {
+    }
+    var src = args[1][0..countChars(args[1]) : 0];
+
+    const stdout = std.io.getStdOut().writer();
+    try stdout.print("{s}\n", .{ src });
+}
+
+fn countChars(chars: [*:0]u8) usize {
+    var i: usize = 0;
+    while(true){
+        if(chars[i] == 0){
+            return i;
+        }
+        i += 1;
+    }
 }
 
 test "simple test" {
