@@ -7,8 +7,8 @@ pub fn main() !void {
     }
     var src = args[1][0..countChars(args[1]) : 0];
 
-    const stdout = std.io.getStdOut().writer();
-    try stdout.print("{s}\n", .{ src });
+    const ast = try Ast.parse(src, std.heap.page_allocator);
+    _ = ast;
 }
 
 fn countChars(chars: [*:0]u8) usize {
@@ -27,3 +27,6 @@ test "simple test" {
     try list.append(42);
     try std.testing.expectEqual(@as(i32, 42), list.pop());
 }
+
+const Ast = @import("./AST.zig");
+const GenIl = @import("./gen_il.zig");

@@ -12,7 +12,7 @@ source: [:0]const u8,
 tokens: TokenList.Slice,
 nodes: NodeList.Slice,
 extras: ExtraDataList.Slice,
-root: usize,
+root: usize = 0,
 
 pub fn deinit(ast: *Ast, gpa: Allocator) void {
     ast.tokens.deinit(gpa);
@@ -25,7 +25,7 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
     var tokens = Ast.TokenList{};
     defer tokens.deinit(gpa);
 
-    const tokenizer = Tokenizer.init(source);
+    var tokenizer = Tokenizer.init(source);
     while (true) {
         const token = tokenizer.next();
         try tokens.append(gpa, .{
@@ -36,21 +36,22 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
     }
 
     var parser = Parser{
+        .gpa = gpa,
         .source = source,
         .tokens = tokens,
         .tkidx = 0,
         .nodes = NodeList{},
-        .extras = ExtraDataList{},
+        .extras = ExtraDataList.init(gpa),
     };
     defer parser.deinit();
-    
+
     parser.parse();
 
     return Ast {
         .source = source,
         .tokens = tokens.toOwnedSlice(),
         .nodes = parser.nodes.toOwnedSlice(),
-        .extras = parser.extras.toOwnedSlice(),
+        .extras = try parser.extras.toOwnedSlice(),
     };
 }
 
