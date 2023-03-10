@@ -52,6 +52,7 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
         .tokens = tokens.toOwnedSlice(),
         .nodes = parser.nodes.toOwnedSlice(),
         .extras = try parser.extras.toOwnedSlice(),
+        .root = parser.root,
     };
 }
 
