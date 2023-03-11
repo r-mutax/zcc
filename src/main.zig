@@ -8,7 +8,8 @@ pub fn main() !void {
     var src = args[1][0..countChars(args[1]) : 0];
 
     const ast = try Ast.parse(src, std.heap.page_allocator);
-    _ = ast;
+    const il = try Cil.generate(ast);
+    _ = il;
 }
 
 fn countChars(chars: [*:0]u8) usize {
@@ -29,4 +30,4 @@ test "simple test" {
 }
 
 const Ast = @import("./AST.zig");
-const GenIl = @import("./gen_il.zig");
+const Cil = @import("./CIL.zig");
