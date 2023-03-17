@@ -7,9 +7,19 @@ pub fn main() !void {
     }
     var src = args[1][0..countChars(args[1]) : 0];
 
-    const ast = try Ast.parse(src, std.heap.page_allocator);
-    const il = try Cil.generate(ast);
-    _ = il;
+    // generate AST
+    var ast = try Ast.parse(src, std.heap.page_allocator);
+    defer ast.deinit();
+
+    // generate C Intermediate Language
+    var cil = try CilGen.init(ast, std.heap.page_allocator);
+    defer cil.deinit();
+
+    try cil.generate();
+
+    // generate Asmmbuler
+    var asmgen = AsmGen.init(cil);
+    try asmgen.generate();
 }
 
 fn countChars(chars: [*:0]u8) usize {
@@ -30,4 +40,5 @@ test "simple test" {
 }
 
 const Ast = @import("./AST.zig");
-const Cil = @import("./CIL.zig");
+const CilGen = @import("./CIlGen.zig");
+const AsmGen = @import("./AsmGen.zig");

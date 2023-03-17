@@ -8,22 +8,23 @@ pub const TokenList = std.MultiArrayList(struct {
     start: usize,
 });
 
+gpa: Allocator,
 source: [:0]const u8,
 tokens: TokenList.Slice,
 nodes: NodeList.Slice,
 extras: ExtraDataList.Slice,
 root: usize = 0,
 
-pub fn deinit(ast: *Ast, gpa: Allocator) void {
-    ast.tokens.deinit(gpa);
-    ast.nodes.deinit(gpa);
-    gpa.free(ast.extra_data);
+pub fn deinit(ast: *Ast) void {
+    ast.tokens.deinit(ast.gpa);
+    ast.nodes.deinit(ast.gpa);
+    ast.gpa.free(ast.extras);
     ast.* = undefined;
 }
 
 pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
     var tokens = Ast.TokenList{};
-    defer tokens.deinit(gpa);
+    //defer tokens.deinit(gpa);
 
     var tokenizer = Tokenizer.init(source);
     while (true) {
@@ -43,17 +44,30 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
         .nodes = NodeList{},
         .extras = ExtraDataList.init(gpa),
     };
-    defer parser.deinit();
+    //defer parser.deinit();
 
     parser.parse();
 
     return Ast {
+        .gpa = gpa,
         .source = source,
         .tokens = tokens.toOwnedSlice(),
         .nodes = parser.nodes.toOwnedSlice(),
         .extras = try parser.extras.toOwnedSlice(),
         .root = parser.root,
     };
+}
+
+pub fn getNodeTag(ast: *Ast, idx: usize) Node.Tag {
+    return ast.nodes.items(.tag)[idx];
+}
+
+pub fn getNodeNumValue(ast: *Ast, idx: usize) usize {
+    const main_token = ast.nodes.items(.main_token)[idx];
+    const tkidx = ast.tokens.items(.start)[main_token];
+    var tokenizer = Tokenizer.init(ast.source);
+
+    return tokenizer.getNumValue(tkidx);
 }
 
 pub const Node = struct {
