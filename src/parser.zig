@@ -114,6 +114,16 @@ fn parseMultiple(p: *Parser) !usize {
                     }),
                 });
             },
+            .tk_div => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_div,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parsePrimary(),
+                    }),
+                });
+            },
             else => { return lhs; }
         }
     }

@@ -50,6 +50,13 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  imul rax, rdi\n");
                 _ = try stdout.writeAll("  push rax\n");
             },
+            Cil.Tag.cil_div => {
+                _ = try stdout.writeAll("  pop rdi\n");
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  cqo\n");
+                _ = try stdout.writeAll("  idiv rdi\n");
+                _ = try stdout.writeAll("  push rax\n");
+            },
         }
     }
 }
