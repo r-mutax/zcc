@@ -60,7 +60,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
-// expr = bitOr
+// expr = logicAnd
+// logicAnd = bitOr ("&&" bitOr)*
 // bitOr = bitXor ("|" bitXor)*
 // bitXor = bitAnd ( "^" bitAnd )*
 // bitAnd = equality ( '&' equality )*
@@ -82,7 +83,26 @@ fn parseProgram(p: *Parser) !usize {
 }
 
 fn parseExpr(p: *Parser) !usize {
-    return try p.parsebitOr();
+    return try p.parseLogicAnd();
+}
+
+fn parseLogicAnd(p: *Parser) !usize {
+    var lhs = try p.parsebitOr();
+
+    while(true){
+        if(p.currentTokenTag() == .tk_and_and){
+            lhs = try p.addNode(.{
+                .tag = .nd_logic_and,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = lhs,
+                    .rhs = try p.parsebitOr(),
+                }),
+            });
+        } else {
+            return lhs;
+        }
+    }
 }
 
 fn parsebitOr(p: *Parser) !usize {

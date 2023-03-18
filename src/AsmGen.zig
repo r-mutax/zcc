@@ -107,6 +107,17 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  or rax, rdi\n");
                 _ = try stdout.writeAll("  push rax\n");
             },
+            .cil_label => {
+                _ = try stdout.print(".L{}:\n", .{cil.lhs});
+            },
+            .cil_jmp => {
+                _ = try stdout.print("  jmp .L{}\n", .{cil.lhs});
+            },
+            .cil_jz => {
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  cmp rax, 0\n");
+                _ = try stdout.print("  je .L{}\n", .{cil.lhs});
+            },
         }
     }
 }

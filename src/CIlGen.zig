@@ -6,6 +6,7 @@ ast: Ast = undefined,
 gpa: Allocator,
 cils: CilList = undefined,
 cilidx: usize = 0,
+label: u32 = 0,
 
 pub fn init(ast: Ast, gpa: Allocator) !CilGen {
     return CilGen {
@@ -40,6 +41,12 @@ fn addCil(c: *CilGen, cil: Cil) !void {
     try c.cils.append(c.gpa, cil);
 }
 
+fn getLabelNo(c: *CilGen) u32 {
+    const result = c.label;
+    c.label += 1;
+    return result;
+} 
+
 fn gen(c: *CilGen, node: usize) !void {
 
     switch(c.ast.getNodeTag(node)){
@@ -60,6 +67,49 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.gen(extra.lhs);
             try c.addCil(Cil{
                 .tag = .cil_sub,
+            });
+            return;
+        },
+        .nd_logic_and => {
+            const l_false = c.getLabelNo();
+            const l_end = c.getLabelNo();
+
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+            
+            // eval lhs
+            try c.gen(extra.lhs);
+            try c.addCil(Cil{
+                .tag = .cil_jz,
+                .lhs = l_false,
+            });
+
+            // eval rhs
+            try c.gen(extra.rhs);
+            try c.addCil(Cil{
+                .tag = .cil_jz,
+                .lhs = l_false,
+            });
+
+            // write result
+            try c.addCil(Cil{
+                .tag = .cil_push_imm,
+                .lhs = 1,
+            });
+            try c.addCil(Cil{
+                .tag = .cil_jmp,
+                .lhs = l_end,
+            });
+            try c.addCil(Cil{
+                .tag = .cil_label,
+                .lhs = l_false,
+            });
+            try c.addCil(Cil{
+                .tag = .cil_push_imm,
+                .lhs = 0,
+            });
+            try c.addCil(Cil{
+                .tag = .cil_label,
+                .lhs = l_end,
             });
             return;
         },
@@ -137,6 +187,11 @@ pub const Cil = struct{
         cil_bit_and,
         cil_bit_xor,
         cil_bit_or,
+        cil_label,
+        cil_jz,
+            // if stack top is 0, then jamp to lhs
+        cil_jmp,
+            // jmp to lhs
     };
 
     tag: Tag,

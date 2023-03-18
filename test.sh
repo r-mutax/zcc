@@ -31,3 +31,10 @@ assert 2 "(2>1) + (3 <=5)"
 assert 4 "12 & 6"
 assert 5 "3 ^ 6"
 assert 7 "3 | 6"
+
+
+# logic and
+assert 1 "1 && 44"
+assert 0 "0 && 44"
+assert 0 "1 && 0"
+assert 0 "0 && 0"
