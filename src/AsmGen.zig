@@ -31,7 +31,13 @@ pub fn genAsm(a: *AsmGen) !void {
         switch(cil.tag){
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
-            }
+            },
+            Cil.Tag.cil_add => {
+                _ = try stdout.writeAll("  pop rdi\n");
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  add rax, rdi\n");
+                _ = try stdout.writeAll("  push rax\n");
+            },
         }
     }
 }

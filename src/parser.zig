@@ -42,20 +42,20 @@ fn addNode(p:*Parser, node: Node) !usize {
 
 fn addExtra(p: *Parser, extra: anytype) Allocator.Error!usize {
     const fields = std.meta.fields(@TypeOf(extra));
-    try p.extra_data.ensureUnusedCapacity(p.gpa, fields.len);
+    try p.extras.ensureUnusedCapacity(fields.len);
 
-    const result = @intCast(u32, p.extra_data.items.len);
-    for(fields) | field | {
-        p.extra_data.appendAssumpeCapacity(@field(extra, field.name));
+    const result = @intCast(u32, p.extras.items.len);
+    inline for(fields) | field | {
+        p.extras.appendAssumeCapacity(@field(extra, field.name));
     }
     return result;
 }
 
 fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
-    try p.extra_data.appendSlice(p.gpa, list);
+    try p.extras.appendSlice(p.gpa, list);
     return Node.Range {
-        .start = p.extra_data.items.len - list.len,
-        .end = p.extra_data.items.len,
+        .start = p.extras.items.len - list.len,
+        .end = p.extras.items.len,
     };
 }
 
@@ -64,7 +64,29 @@ pub fn parse(p: *Parser) void {
 }
 
 fn parseProgram(p: *Parser) !usize {
-    return p.parsePrimary();
+    return try p.parseAdd();
+}
+
+fn parseAdd(p: *Parser) !usize {
+    var lhs = try p.parsePrimary();
+
+    while(true) {
+        switch(p.currentTokenTag()){
+            Token.Tag.tk_add => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_add,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parsePrimary(),
+                    }),
+                });
+            },
+            else => {
+                return lhs;
+            }
+        }
+    }
 }
 
 fn parsePrimary(p: *Parser) !usize {

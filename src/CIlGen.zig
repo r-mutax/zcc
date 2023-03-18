@@ -46,6 +46,20 @@ fn gen(c: *CilGen, node: usize) !void {
             .tag = .cil_push_imm,
             .lhs = @intCast(u32, c.ast.getNodeNumValue(node)),
         });
+        return;
+    }
+
+    const extra = c.ast.getNodeExtra(node, Node.Data);
+    try c.gen(extra.lhs);
+    try c.gen(extra.rhs);
+
+    switch(c.ast.getNodeTag(node)){
+        Node.Tag.nd_add => {
+            try c.addCil(Cil{
+                .tag = .cil_add,
+            });
+        },
+        else => {},
     }
 }
 
@@ -53,6 +67,8 @@ pub const Cil = struct{
     pub const Tag = enum {
         cil_push_imm,
             // push immidiate
+        cil_add,
+            // add stack top of 2
     };
 
     tag: Tag,

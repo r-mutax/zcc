@@ -70,12 +70,22 @@ pub fn getNodeNumValue(ast: *Ast, idx: usize) usize {
     return tokenizer.getNumValue(tkidx);
 }
 
+pub fn getNodeExtra(ast: *Ast, idx: usize, comptime T: type) T {
+    const extra_idx = ast.nodes.items(.data)[idx];
+    const fields = std.meta.fields(T);
+    var result: T = undefined;
+    inline for(fields, 0..) | field, i | {
+        @field(result, field.name) = ast.extras[extra_idx + i];
+    }
+    return result;
+}
+
 pub const Node = struct {
     tag: Tag,
     main_token: usize,
     data: usize,
 
-    const Data = struct {
+    pub const Data = struct {
         lhs: usize,
         rhs: usize,
     };
