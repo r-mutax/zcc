@@ -106,6 +106,9 @@ fn gen(c: *CilGen, node: usize) !void {
         Node.Tag.nd_bit_and => {
             try c.addCil(Cil{.tag = .cil_bit_and});
         },
+        Node.Tag.nd_bit_xor => {
+            try c.addCil(Cil{.tag = .cil_bit_xor});
+        },
         else => {},
     }
 }
@@ -129,6 +132,7 @@ pub const Cil = struct{
         cil_gt,
         cil_ge,
         cil_bit_and,
+        cil_bit_xor,
     };
 
     tag: Tag,

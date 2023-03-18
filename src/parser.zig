@@ -60,7 +60,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
-// expr = equality
+// expr = bitXor
+// bitXor = bitAnd ( "^" bitAnd )*
 // bitAnd = equality ( '&' equality )*
 // equality = relational ("==" relational | "!=" relational )*
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
@@ -80,7 +81,26 @@ fn parseProgram(p: *Parser) !usize {
 }
 
 fn parseExpr(p: *Parser) !usize {
-    return try p.parsebitAnd();
+    return try p.parsebitXor();
+}
+
+fn parsebitXor(p: *Parser) !usize {
+    var lhs = try p.parsebitAnd();
+
+    while(true){
+        if(p.currentTokenTag() == .tk_hat){
+            lhs = try p.addNode(.{
+                .tag = .nd_bit_xor,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = lhs,
+                    .rhs = try p.parsebitAnd(),
+                }),
+            });
+        } else {
+            return lhs;
+        }
+    }
 }
 
 fn parsebitAnd(p: *Parser) !usize {

@@ -95,6 +95,12 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  and rax, rdi\n");
                 _ = try stdout.writeAll("  push rax\n");
             },
+            .cil_bit_xor => {
+                _ = try stdout.writeAll("  pop rdi\n");
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  xor rax, rdi\n");
+                _ = try stdout.writeAll("  push rax\n");
+            },
         }
     }
 }
