@@ -37,7 +37,15 @@ pub fn getCilSize(c: *CilGen) usize {
     return c.cils.slice().len;
 }
 
-fn addCil(c: *CilGen, cil: Cil) !void {
+fn addCil(c: *CilGen, tag: Cil.Tag, lhs: u32, rhs: u32) !void {
+    try c.cils.append(c.gpa, Cil{
+        .tag = tag,
+        .lhs = lhs,
+        .rhs = rhs,
+    });
+}
+
+fn addCil_Old(c: *CilGen, cil: Cil) !void {
     try c.cils.append(c.gpa, cil);
 }
 
@@ -51,23 +59,15 @@ fn gen(c: *CilGen, node: usize) !void {
 
     switch(c.ast.getNodeTag(node)){
         .nd_num => {
-            try c.addCil(Cil{
-                .tag = .cil_push_imm,
-                .lhs = @intCast(u32, c.ast.getNodeNumValue(node)),
-            });
+            try c.addCil(.cil_push_imm, @intCast(u32, c.ast.getNodeNumValue(node)), 0);
             return;
         },
         .nd_negation => {
-            try c.addCil(Cil{
-                .tag = .cil_push_imm,
-                .lhs = 0,
-            });
+            try c.addCil( .cil_push_imm, 0, 0);
 
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.lhs);
-            try c.addCil(Cil{
-                .tag = .cil_sub,
-            });
+            try c.addCil(.cil_sub, 0, 0);
             return;
         },
         .nd_logic_and => {
@@ -78,39 +78,18 @@ fn gen(c: *CilGen, node: usize) !void {
             
             // eval lhs
             try c.gen(extra.lhs);
-            try c.addCil(Cil{
-                .tag = .cil_jz,
-                .lhs = l_false,
-            });
+            try c.addCil(.cil_jz, l_false, 0);
 
             // eval rhs
             try c.gen(extra.rhs);
-            try c.addCil(Cil{
-                .tag = .cil_jz,
-                .lhs = l_false,
-            });
+            try c.addCil(.cil_jz, l_false, 0);
 
             // write result
-            try c.addCil(Cil{
-                .tag = .cil_push_imm,
-                .lhs = 1,
-            });
-            try c.addCil(Cil{
-                .tag = .cil_jmp,
-                .lhs = l_end,
-            });
-            try c.addCil(Cil{
-                .tag = .cil_label,
-                .lhs = l_false,
-            });
-            try c.addCil(Cil{
-                .tag = .cil_push_imm,
-                .lhs = 0,
-            });
-            try c.addCil(Cil{
-                .tag = .cil_label,
-                .lhs = l_end,
-            });
+            try c.addCil(.cil_push_imm, 1, 0);
+            try c.addCil(.cil_jmp, l_end, 0);
+            try c.addCil(.cil_label, l_false, 0);
+            try c.addCil(.cil_push_imm, 0, 0);
+            try c.addCil(.cil_label, l_end, 0);
             return;
         },
         else => { },
@@ -122,45 +101,37 @@ fn gen(c: *CilGen, node: usize) !void {
 
     switch(c.ast.getNodeTag(node)){
         Node.Tag.nd_add => {
-            try c.addCil(Cil{
-                .tag = .cil_add,
-            });
+            try c.addCil(.cil_add, 0, 0);
         },
         Node.Tag.nd_sub => {
-            try c.addCil(Cil{
-                .tag = .cil_sub,
-            });
+            try c.addCil(.cil_sub, 0, 0);
         },
         Node.Tag.nd_mul => {
-            try c.addCil(Cil{
-                .tag = .cil_mul,
-            });
+            try c.addCil(.cil_mul, 0, 0);
         },
         Node.Tag.nd_div => {
-            try c.addCil(Cil{
-                .tag = .cil_div,
-            });
+            try c.addCil(.cil_div, 0, 0);
         },
         Node.Tag.nd_equal => {
-            try c.addCil(Cil{.tag = .cil_equal});
+            try c.addCil(.cil_equal, 0, 0);
         },
         Node.Tag.nd_not_equal => {
-            try c.addCil(Cil{.tag = .cil_not_equal});
+            try c.addCil(.cil_not_equal, 0, 0);
         },
         Node.Tag.nd_gt => {
-            try c.addCil(Cil{.tag = .cil_gt});
+            try c.addCil(.cil_gt, 0, 0);
         },
         Node.Tag.nd_ge => {
-            try c.addCil(Cil{.tag = .cil_ge});
+            try c.addCil(.cil_ge, 0, 0);
         },
         Node.Tag.nd_bit_and => {
-            try c.addCil(Cil{.tag = .cil_bit_and});
+            try c.addCil(.cil_bit_and, 0, 0);
         },
         Node.Tag.nd_bit_xor => {
-            try c.addCil(Cil{.tag = .cil_bit_xor});
+            try c.addCil(.cil_bit_xor, 0, 0);
         },
         Node.Tag.nd_bit_or => {
-            try c.addCil(Cil{.tag = .cil_bit_or});
+            try c.addCil(.cil_bit_or, 0, 0);
         },
         else => {},
     }
