@@ -92,6 +92,28 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_label, l_end, 0);
             return;
         },
+        .nd_logic_or => {
+            const l_true = c.getLabelNo();
+            const l_end = c.getLabelNo();
+
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+
+            // eval lhs
+            try c.gen(extra.lhs);
+            try c.addCil(.cil_jnz, l_true, 0);
+
+            // eval rhs
+            try c.gen(extra.rhs);
+            try c.addCil(.cil_jnz, l_true, 0);
+
+            // write result
+            try c.addCil(.cil_push_imm, 0, 0);
+            try c.addCil(.cil_jmp, l_end, 0);
+            try c.addCil(.cil_label, l_true, 0);
+            try c.addCil(.cil_push_imm, 1, 0);
+            try c.addCil(.cil_label, l_end, 0);
+            return;
+        },
         else => { },
     }
 
@@ -161,6 +183,8 @@ pub const Cil = struct{
         cil_label,
         cil_jz,
             // if stack top is 0, then jamp to lhs
+        cil_jnz,
+            // if stack top is none zero, then jamp to lhs
         cil_jmp,
             // jmp to lhs
     };

@@ -60,7 +60,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
-// expr = logicAnd
+// expr = logicOr
+// logicOr = logicAnd ("||" logicAnd)*
 // logicAnd = bitOr ("&&" bitOr)*
 // bitOr = bitXor ("|" bitXor)*
 // bitXor = bitAnd ( "^" bitAnd )*
@@ -83,7 +84,26 @@ fn parseProgram(p: *Parser) !usize {
 }
 
 fn parseExpr(p: *Parser) !usize {
-    return try p.parseLogicAnd();
+    return try p.parseLogicOr();
+}
+
+fn parseLogicOr(p: *Parser) !usize {
+    var lhs = try p.parseLogicAnd();
+
+    while(true){
+        if(p.currentTokenTag() == .tk_pipe_pipe){
+            lhs = try p.addNode(.{
+                .tag = .nd_logic_or,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = lhs,
+                    .rhs = try p.parseLogicAnd(),
+                }),
+            });
+        } else {
+            return lhs;
+        }
+    }
 }
 
 fn parseLogicAnd(p: *Parser) !usize {

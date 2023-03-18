@@ -38,3 +38,9 @@ assert 1 "1 && 44"
 assert 0 "0 && 44"
 assert 0 "1 && 0"
 assert 0 "0 && 0"
+
+# logic or
+assert 1 "1 || 44"
+assert 1 "0 || 44"
+assert 1 "1 || 0"
+assert 0 "0 || 0"
