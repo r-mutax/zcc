@@ -68,7 +68,7 @@ fn parseProgram(p: *Parser) !usize {
 }
 
 fn parseAdd(p: *Parser) !usize {
-    var lhs = try p.parsePrimary();
+    var lhs = try p.parseMultiple();
 
     while(true) {
         switch(p.currentTokenTag()){
@@ -78,7 +78,7 @@ fn parseAdd(p: *Parser) !usize {
                     .main_token = p.nextToken(),
                     .data = try p.addExtra(Node.Data{
                         .lhs = lhs,
-                        .rhs = try p.parsePrimary(),
+                        .rhs = try p.parseMultiple(),
                     }),
                 });
             },
@@ -88,13 +88,33 @@ fn parseAdd(p: *Parser) !usize {
                     .main_token = p.nextToken(),
                     .data = try p.addExtra(Node.Data{
                         .lhs = lhs,
-                        .rhs = try p.parsePrimary(),
+                        .rhs = try p.parseMultiple(),
                     }),
                 });
             },
             else => {
                 return lhs;
             }
+        }
+    }
+}
+
+fn parseMultiple(p: *Parser) !usize {
+    var lhs = try p.parsePrimary();
+
+    while(true){
+        switch(p.currentTokenTag()){
+            .tk_mul => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_mul,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parsePrimary(),
+                    }),
+                });
+            },
+            else => { return lhs; }
         }
     }
 }
