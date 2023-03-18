@@ -60,9 +60,11 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
-// expr = add
-// add = multiple ( '+' multiple | `-` multiple )
-// multiple = unary ( '*' unary | `/` unary )
+// expr = equality
+// equality = relational ("==" relational | "!=" relational )*
+// relational = add ("<" add | "<=" add | ">" add | ">=" add)*
+// add = multiple ( '+' multiple | `-` multiple )*
+// multiple = unary ( '*' unary | `/` unary )*
 // unary = ( "+" | "-" )? primary
 // primary = num | '(' expr ')`
 
@@ -77,7 +79,87 @@ fn parseProgram(p: *Parser) !usize {
 }
 
 fn parseExpr(p: *Parser) !usize {
-    return try p.parseAdd();
+    return try p.parseEquality();
+}
+
+fn parseEquality(p: *Parser) !usize {
+    var lhs = try p.parseRelational();
+
+    while(true){
+        switch(p.currentTokenTag()){
+            .tk_equal => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_equal,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parseRelational(),
+                    }),
+                });
+            },
+            .tk_not_equal =>{
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_not_equal,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parseRelational(),
+                    }),
+                });
+            },
+            else => { return lhs; }
+        }
+    }
+}
+
+fn parseRelational(p: *Parser) !usize {
+    var lhs = try p.parseAdd();
+
+    while(true){
+        switch(p.currentTokenTag()){
+            .tk_l_angle_bracket => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_gt,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parseAdd(),
+                    }),
+                });
+            },
+            .tk_l_angle_bracket_equal => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_ge,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parseAdd(),
+                    }),
+                });
+            },
+            .tk_r_angle_bracket => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_gt,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = try p.parseAdd(),
+                        .rhs = lhs,
+                    }),
+                });
+            },
+            .tk_r_angle_bracket_equal => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_ge,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = try p.parseAdd(),
+                        .rhs = lhs,
+                    }),
+                });
+            },
+            else => { return lhs; }
+        }
+    }
 }
 
 fn parseAdd(p: *Parser) !usize {

@@ -91,6 +91,18 @@ fn gen(c: *CilGen, node: usize) !void {
                 .tag = .cil_div,
             });
         },
+        Node.Tag.nd_equal => {
+            try c.addCil(Cil{.tag = .cil_equal});
+        },
+        Node.Tag.nd_not_equal => {
+            try c.addCil(Cil{.tag = .cil_not_equal});
+        },
+        Node.Tag.nd_gt => {
+            try c.addCil(Cil{.tag = .cil_gt});
+        },
+        Node.Tag.nd_ge => {
+            try c.addCil(Cil{.tag = .cil_ge});
+        },
         else => {},
     }
 }
@@ -107,6 +119,12 @@ pub const Cil = struct{
             // multiple stack top of 2
         cil_div,
             // divide stack top of 2
+        cil_equal,
+            // if stack top of 2 is equal, push 1
+        cil_not_equal,
+            // if stack top of 2 is not equal, push 1
+        cil_gt,
+        cil_ge,
     };
 
     tag: Tag,
