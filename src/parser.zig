@@ -1,4 +1,5 @@
 pub const Parser = @This();
+pub const Error = TokenError || Allocator.Error;
 
 gpa: Allocator,
 source: [:0] const u8,
@@ -59,11 +60,22 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
+// expr = add
+// add = multiple ( '+' multiple | `-` multiple )
+// multiple = primary ( '*' primary | `/` primary )
+// primary = num | '(' expr ')`
+
+
+
 pub fn parse(p: *Parser) void {
     p.root = p.parseProgram() catch unreachable;
 }
 
 fn parseProgram(p: *Parser) !usize {
+    return try p.parseExpr();
+}
+
+fn parseExpr(p: *Parser) !usize {
     return try p.parseAdd();
 }
 
@@ -129,16 +141,26 @@ fn parseMultiple(p: *Parser) !usize {
     }
 }
 
-fn parsePrimary(p: *Parser) !usize {
-    if(p.currentTokenTag() != Token.Tag.tk_num){
-        return TokenError.UnexpectedToken;
-    }
+fn parsePrimary(p: *Parser) Error!usize {
 
-    return try p.addNode(.{
-        .tag = .nd_num,
-        .main_token = p.nextToken(),
-        .data = 0,
-    });
+    switch(p.currentTokenTag()){
+        .tk_num => {
+            return try p.addNode(.{
+                .tag = .nd_num,
+                .main_token = p.nextToken(),
+                .data = 0,
+            });
+        },
+        .tk_l_paren => {
+            _ = p.nextToken();
+            const node = p.parseExpr();
+            try p.expectToken(Token.Tag.tk_r_paren);
+            return node;
+        },
+        else => {
+            return TokenError.UnexpectedToken;
+        }
+    }
 }
 
 const std = @import("std");
