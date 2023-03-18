@@ -103,6 +103,9 @@ fn gen(c: *CilGen, node: usize) !void {
         Node.Tag.nd_ge => {
             try c.addCil(Cil{.tag = .cil_ge});
         },
+        Node.Tag.nd_bit_and => {
+            try c.addCil(Cil{.tag = .cil_bit_and});
+        },
         else => {},
     }
 }
@@ -125,6 +128,7 @@ pub const Cil = struct{
             // if stack top of 2 is not equal, push 1
         cil_gt,
         cil_ge,
+        cil_bit_and,
     };
 
     tag: Tag,
