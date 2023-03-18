@@ -41,12 +41,29 @@ fn addCil(c: *CilGen, cil: Cil) !void {
 }
 
 fn gen(c: *CilGen, node: usize) !void {
-    if(c.ast.getNodeTag(node) == Node.Tag.nd_num){
-        try c.addCil(Cil{
-            .tag = .cil_push_imm,
-            .lhs = @intCast(u32, c.ast.getNodeNumValue(node)),
-        });
-        return;
+
+    switch(c.ast.getNodeTag(node)){
+        .nd_num => {
+            try c.addCil(Cil{
+                .tag = .cil_push_imm,
+                .lhs = @intCast(u32, c.ast.getNodeNumValue(node)),
+            });
+            return;
+        },
+        .nd_negation => {
+            try c.addCil(Cil{
+                .tag = .cil_push_imm,
+                .lhs = 0,
+            });
+
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+            try c.gen(extra.lhs);
+            try c.addCil(Cil{
+                .tag = .cil_sub,
+            });
+            return;
+        },
+        else => { },
     }
 
     const extra = c.ast.getNodeExtra(node, Node.Data);

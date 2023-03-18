@@ -62,7 +62,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 
 // expr = add
 // add = multiple ( '+' multiple | `-` multiple )
-// multiple = primary ( '*' primary | `/` primary )
+// multiple = unary ( '*' unary | `/` unary )
+// unary = ( "+" | "-" )? primary
 // primary = num | '(' expr ')`
 
 
@@ -112,7 +113,7 @@ fn parseAdd(p: *Parser) !usize {
 }
 
 fn parseMultiple(p: *Parser) !usize {
-    var lhs = try p.parsePrimary();
+    var lhs = try p.parseUnary();
 
     while(true){
         switch(p.currentTokenTag()){
@@ -122,7 +123,7 @@ fn parseMultiple(p: *Parser) !usize {
                     .main_token = p.nextToken(),
                     .data = try p.addExtra(Node.Data{
                         .lhs = lhs,
-                        .rhs = try p.parsePrimary(),
+                        .rhs = try p.parseUnary(),
                     }),
                 });
             },
@@ -132,11 +133,33 @@ fn parseMultiple(p: *Parser) !usize {
                     .main_token = p.nextToken(),
                     .data = try p.addExtra(Node.Data{
                         .lhs = lhs,
-                        .rhs = try p.parsePrimary(),
+                        .rhs = try p.parseUnary(),
                     }),
                 });
             },
             else => { return lhs; }
+        }
+    }
+}
+
+fn parseUnary(p: *Parser) Error!usize {
+    switch(p.currentTokenTag()){
+        .tk_add => {
+            _ = p.nextToken();
+            return try p.parsePrimary();
+        },
+        .tk_sub => {
+            return p.addNode(.{
+                .tag = .nd_negation,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = try p.parsePrimary(),
+                    .rhs = 0,
+                }),
+            });
+        },
+        else => {
+            return try p.parsePrimary();
         }
     }
 }

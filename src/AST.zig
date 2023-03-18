@@ -150,6 +150,8 @@ pub const Node = struct {
             // address
         nd_dreference,
             // pointer dereference
+        nd_negation,
+            // '-' primary
     };
 
     pub const Range = struct {
