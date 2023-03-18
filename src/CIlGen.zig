@@ -59,6 +59,11 @@ fn gen(c: *CilGen, node: usize) !void {
                 .tag = .cil_add,
             });
         },
+        Node.Tag.nd_sub => {
+            try c.addCil(Cil{
+                .tag = .cil_sub,
+            });
+        },
         else => {},
     }
 }
@@ -69,6 +74,8 @@ pub const Cil = struct{
             // push immidiate
         cil_add,
             // add stack top of 2
+        cil_sub,
+            // sub stack top of 2
     };
 
     tag: Tag,

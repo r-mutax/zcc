@@ -82,6 +82,16 @@ fn parseAdd(p: *Parser) !usize {
                     }),
                 });
             },
+            Token.Tag.tk_sub => {
+                lhs = try p.addNode(.{
+                    .tag = Node.Tag.nd_sub,
+                    .main_token = p.nextToken(),
+                    .data = try p.addExtra(Node.Data{
+                        .lhs = lhs,
+                        .rhs = try p.parsePrimary(),
+                    }),
+                });
+            },
             else => {
                 return lhs;
             }
