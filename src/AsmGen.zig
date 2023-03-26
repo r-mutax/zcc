@@ -14,11 +14,13 @@ pub fn generate(a: *AsmGen) !void {
     _ = try stdout.writeAll(".intel_syntax noprefix\n");
     _ = try stdout.writeAll(".global main\n");
     _ = try stdout.writeAll("main:\n");
+    _ = try stdout.writeAll("  push rbp\n");
+    _ = try stdout.writeAll("  mov rbp, rsp\n");
 
     try a.genAsm();
 
-    // _ = try stdout.writeAll("  mov rsp, rbp\n");
-    // _ = try stdout.writeAll("  pop rbp\n");
+    _ = try stdout.writeAll("  mov rsp, rbp\n");
+    _ = try stdout.writeAll("  pop rbp\n");
     _ = try stdout.writeAll("  ret\n");
 }
 
@@ -127,6 +129,12 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  cmp rax, 0\n");
                 _ = try stdout.print("  jne .L{}\n", .{cil.lhs});
             },
+            .cil_return => {
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  mov rsp, rbp\n");
+                _ = try stdout.writeAll("  pop rbp\n");
+                _ = try stdout.writeAll("  ret\n");
+            }
         }
     }
 }

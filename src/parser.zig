@@ -61,7 +61,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 }
 
 // program = stmt*
-// stmt = expr ";"
+// stmt = expr ";" |
+//          "return" expr ";"
 // expr = logicOr
 // logicOr = logicAnd ("||" logicAnd)*
 // logicAnd = bitOr ("&&" bitOr)*
@@ -97,7 +98,25 @@ fn parseProgram(p: *Parser) Error!usize {
 }
 
 fn parseStmt(p: *Parser) !usize {
-    const lhs = try p.parseExpr();
+    return switch(p.currentTokenTag()){
+        .tk_return => try p.parseReturnStatement(),
+        else => {
+            const lhs = try p.parseExpr();
+            try p.expectToken(.tk_semicoron);
+            return lhs;
+        },
+    };
+}
+
+fn parseReturnStatement(p: *Parser) !usize {
+    const lhs = try p.addNode(.{
+        .tag = .nd_return,
+        .main_token = p.nextToken(),
+        .data = try p.addExtra(Node.Data{
+            .lhs = try p.parseExpr(),
+            .rhs = 0,
+        }),
+    });
     try p.expectToken(.tk_semicoron);
     return lhs;
 }

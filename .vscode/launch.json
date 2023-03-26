@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/zig-out/bin/zcc",
-            "args": ["-3 * 3 + +10;"],
+            "args": ["return 0;"],
             "cwd": "${workspaceFolder}"
         }
     ]

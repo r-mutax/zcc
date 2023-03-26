@@ -55,8 +55,19 @@ fn gen_program(c: *CilGen, node: usize) !void {
     const rng = c.ast.getNodeExtraList(node);
 
     for( rng ) | idx | {
-        try c.gen(idx);
+        try c.gen_stmt(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
+    }
+}
+
+fn gen_stmt(c: *CilGen, node: usize) !void {
+    switch(c.ast.getNodeTag(node)){
+        .nd_return => {
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+            try c.gen(extra.lhs);
+            try c.addCil(.cil_return, 0, 0);
+        },
+        else => try c.gen_stmt(node),
     }
 }
 
@@ -179,20 +190,28 @@ pub const Cil = struct{
         //            4  rcx
         //            5  r8
         //            6  r9
+        
         cil_push_imm,
         // push immidiate
+        
         cil_add,
         // add stack top of 2
+        
         cil_sub,
         // sub stack top of 2
+        
         cil_mul,
         // multiple stack top of 2
+        
         cil_div,
         // divide stack top of 2
+        
         cil_equal,
         // if stack top of 2 is equal, push 1
+        
         cil_not_equal,
         // if stack top of 2 is not equal, push 1
+        
         cil_gt,
         cil_ge,
         cil_bit_and,
@@ -201,10 +220,15 @@ pub const Cil = struct{
         cil_label,
         cil_jz,
         // if stack top is 0, then jamp to lhs
+        
         cil_jnz,
         // if stack top is none zero, then jamp to lhs
+        
         cil_jmp,
         // jmp to lhs
+
+        cil_return,
+        // return stack top value
     };
 
     tag: Tag,
