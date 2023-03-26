@@ -17,18 +17,22 @@ pub fn generate(a: *AsmGen) !void {
 
     try a.genAsm();
 
-    _ = try stdout.writeAll("  pop rax\n");
+    // _ = try stdout.writeAll("  mov rsp, rbp\n");
+    // _ = try stdout.writeAll("  pop rbp\n");
     _ = try stdout.writeAll("  ret\n");
 }
 
 pub fn genAsm(a: *AsmGen) !void {
-
+    
     var idx: usize = 0;
     const num: usize = a.cil.getCilSize();
     while(idx < num) : (idx += 1) {
         const cil = a.cil.getCil(idx);
-        
-        switch(cil.tag){
+
+        switch (cil.tag) {
+            Cil.Tag.cil_pop => {
+                _ = try stdout.print("  pop {s}\n", .{"rax"});
+            },
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
             },
@@ -122,7 +126,7 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  pop rax\n");
                 _ = try stdout.writeAll("  cmp rax, 0\n");
                 _ = try stdout.print("  jne .L{}\n", .{cil.lhs});
-            }
+            },
         }
     }
 }

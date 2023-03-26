@@ -80,6 +80,12 @@ pub fn getNodeExtra(ast: *Ast, idx: usize, comptime T: type) T {
     return result;
 }
 
+pub fn getNodeExtraList(ast: *Ast, idx:usize) []const usize {
+    const rng = ast.getNodeExtra(idx, Node.Range);
+    const result = ast.extras[rng.start .. rng.end];
+    return result;
+}
+
 pub const Node = struct {
     tag: Tag,
     main_token: usize,

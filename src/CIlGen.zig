@@ -22,7 +22,7 @@ pub fn deinit(c: *CilGen) void {
 pub fn generate(c: *CilGen) !void {
     c.cils = CilList{};
 
-    try c.gen(c.ast.root);
+    try c.gen_program(c.ast.root);
 }
 
 pub fn getCil(c: *CilGen, idx: usize) Cil {
@@ -45,15 +45,21 @@ fn addCil(c: *CilGen, tag: Cil.Tag, lhs: u32, rhs: u32) !void {
     });
 }
 
-fn addCil_Old(c: *CilGen, cil: Cil) !void {
-    try c.cils.append(c.gpa, cil);
-}
-
 fn getLabelNo(c: *CilGen) u32 {
     const result = c.label;
     c.label += 1;
     return result;
-} 
+}
+
+fn gen_program(c: *CilGen, node: usize) !void {
+    const rng = c.ast.getNodeExtraList(node);
+
+    for( rng ) | idx | {
+    // while (idx < rng.end) : (idx += 1) {
+        try c.gen(idx);
+        try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
+    }
+}
 
 fn gen(c: *CilGen, node: usize) !void {
 
@@ -75,7 +81,7 @@ fn gen(c: *CilGen, node: usize) !void {
             const l_end = c.getLabelNo();
 
             const extra = c.ast.getNodeExtra(node, Node.Data);
-            
+
             // eval lhs
             try c.gen(extra.lhs);
             try c.addCil(.cil_jz, l_false, 0);
@@ -159,22 +165,35 @@ fn gen(c: *CilGen, node: usize) !void {
     }
 }
 
+pub const CilRegister = enum(u32) { rax, rdi, rsi, rdx, rcx, r8, r9 };
+
 pub const Cil = struct{
     pub const Tag = enum {
+        cil_pop,
+        // pop
+        //  to register...
+        //      lhs : 1
+        //      rhs : 0  rax
+        //            1  rdi
+        //            2  rsi
+        //            3  rdx
+        //            4  rcx
+        //            5  r8
+        //            6  r9
         cil_push_imm,
-            // push immidiate
+        // push immidiate
         cil_add,
-            // add stack top of 2
+        // add stack top of 2
         cil_sub,
-            // sub stack top of 2
+        // sub stack top of 2
         cil_mul,
-            // multiple stack top of 2
+        // multiple stack top of 2
         cil_div,
-            // divide stack top of 2
+        // divide stack top of 2
         cil_equal,
-            // if stack top of 2 is equal, push 1
+        // if stack top of 2 is equal, push 1
         cil_not_equal,
-            // if stack top of 2 is not equal, push 1
+        // if stack top of 2 is not equal, push 1
         cil_gt,
         cil_ge,
         cil_bit_and,
@@ -182,11 +201,11 @@ pub const Cil = struct{
         cil_bit_or,
         cil_label,
         cil_jz,
-            // if stack top is 0, then jamp to lhs
+        // if stack top is 0, then jamp to lhs
         cil_jnz,
-            // if stack top is none zero, then jamp to lhs
+        // if stack top is none zero, then jamp to lhs
         cil_jmp,
-            // jmp to lhs
+        // jmp to lhs
     };
 
     tag: Tag,
@@ -206,12 +225,12 @@ test "Code gen" {
     _ = try stdout.writeAll("\n");
 
     var ast = try Ast.parse("0", std.heap.page_allocator);
-    _ = try stdout.print("{}\n", .{ast.getNodeTag(ast.root)});    
+    _ = try stdout.print("{}\n", .{ast.getNodeTag(ast.root)});
 
     var cil = try CilGen.init(ast, std.heap.page_allocator);
     try cil.generate();
-    
+
     for(cil.cils.items(.tag)) |a| {
-        _ = try stdout.print("{}\n", .{ a }); 
+        _ = try stdout.print("{}\n", .{ a });
     }
 }

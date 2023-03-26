@@ -53,13 +53,15 @@ fn addExtra(p: *Parser, extra: anytype) Allocator.Error!usize {
 }
 
 fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
-    try p.extras.appendSlice(p.gpa, list);
+    try p.extras.appendSlice(list);
     return Node.Range {
         .start = p.extras.items.len - list.len,
         .end = p.extras.items.len,
     };
 }
 
+// program = stmt*
+// stmt = expr ";"
 // expr = logicOr
 // logicOr = logicAnd ("||" logicAnd)*
 // logicAnd = bitOr ("&&" bitOr)*
@@ -71,16 +73,33 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 // add = multiple ( '+' multiple | `-` multiple )*
 // multiple = unary ( '*' unary | `/` unary )*
 // unary = ( "+" | "-" )? primary
-// primary = num | '(' expr ')`
-
-
+// primary = num | ident | '(' expr ')`
 
 pub fn parse(p: *Parser) void {
     p.root = p.parseProgram() catch unreachable;
 }
 
-fn parseProgram(p: *Parser) !usize {
-    return try p.parseExpr();
+fn parseProgram(p: *Parser) Error!usize {
+    var stmts = std.ArrayList(usize).init(p.gpa);
+    defer stmts.deinit();
+
+    while (p.currentTokenTag() != .tk_eof) {
+        try stmts.append(try p.parseStmt());
+    }
+    const rng = try p.addExtraList(try stmts.toOwnedSlice());
+    const root = try p.addNode(.{
+        .tag = .nd_program,
+        .main_token = 0,
+        .data = try p.addExtra(rng),
+    });
+
+    return root;
+}
+
+fn parseStmt(p: *Parser) !usize {
+    const lhs = try p.parseExpr();
+    try p.expectToken(.tk_semicoron);
+    return lhs;
 }
 
 fn parseExpr(p: *Parser) !usize {
@@ -207,7 +226,7 @@ fn parseEquality(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; }
+            else => { return lhs; },
         }
     }
 }
@@ -257,7 +276,7 @@ fn parseRelational(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; }
+            else => { return lhs; },
         }
     }
 }
@@ -289,7 +308,7 @@ fn parseAdd(p: *Parser) !usize {
             },
             else => {
                 return lhs;
-            }
+            },
         }
     }
 }
@@ -319,7 +338,7 @@ fn parseMultiple(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; }
+            else => { return lhs; },
         }
     }
 }
@@ -342,12 +361,12 @@ fn parseUnary(p: *Parser) Error!usize {
         },
         else => {
             return try p.parsePrimary();
-        }
+        },
     }
 }
 
 fn parsePrimary(p: *Parser) Error!usize {
-
+    
     switch(p.currentTokenTag()){
         .tk_num => {
             return try p.addNode(.{
@@ -364,7 +383,7 @@ fn parsePrimary(p: *Parser) Error!usize {
         },
         else => {
             return TokenError.UnexpectedToken;
-        }
+        },
     }
 }
 
