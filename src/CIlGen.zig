@@ -55,7 +55,6 @@ fn gen_program(c: *CilGen, node: usize) !void {
     const rng = c.ast.getNodeExtraList(node);
 
     for( rng ) | idx | {
-    // while (idx < rng.end) : (idx += 1) {
         try c.gen(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
     }

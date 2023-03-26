@@ -31,7 +31,7 @@ pub fn genAsm(a: *AsmGen) !void {
 
         switch (cil.tag) {
             Cil.Tag.cil_pop => {
-                _ = try stdout.print("  pop {s}\n", .{"rax"});
+                _ = try stdout.print("  pop {s}\n", .{ getCilRegisterName(@intToEnum(CilRegister, cil.lhs)) });
             },
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
@@ -131,6 +131,19 @@ pub fn genAsm(a: *AsmGen) !void {
     }
 }
 
+fn getCilRegisterName(reg: CilRegister) [:0]const u8 {
+    return switch(reg){
+        CilRegister.rax => "rax",
+        CilRegister.rdi => "rdi",
+        CilRegister.rsi => "rsi",
+        CilRegister.rdx => "rdx",
+        CilRegister.rcx => "rcx",
+        CilRegister.r8 => "r8",
+        CilRegister.r9 => "r9",
+    };
+}
+
 const CilGen = @import("./CIlGen.zig");
 const Cil = CilGen.Cil;
+const CilRegister = CilGen.CilRegister;
 const AsmGen = @This();
