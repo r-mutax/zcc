@@ -45,3 +45,5 @@ assert 1 "return 0 || 44;"
 assert 1 "return 1 || 0;"
 assert 0 "return 0 || 0;"
 
+# variable
+assert 0 "return abc;"

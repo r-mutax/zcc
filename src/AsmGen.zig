@@ -1,11 +1,11 @@
 const std = @import("std");
 const stdout = std.io.getStdOut().writer();
 
-cil: CilGen,
+cilgen: CilGen,
 
-pub fn init(cil: CilGen) AsmGen {
+pub fn init(cilgen: CilGen) AsmGen {
     return AsmGen {
-        .cil = cil,
+        .cilgen = cilgen,
     };
 }
 
@@ -17,7 +17,7 @@ pub fn generate(a: *AsmGen) !void {
     _ = try stdout.writeAll("  push rbp\n");
     _ = try stdout.writeAll("  mov rbp, rsp\n");
 
-    try a.genAsm();
+    _ = try stdout.print("  sub rsp, {}\n", .{ ((a.cilgen.getMemorySize() + 15) / 16) * 16});    try a.genAsm();
 
     _ = try stdout.writeAll("  mov rsp, rbp\n");
     _ = try stdout.writeAll("  pop rbp\n");
@@ -27,13 +27,23 @@ pub fn generate(a: *AsmGen) !void {
 pub fn genAsm(a: *AsmGen) !void {
     
     var idx: usize = 0;
-    const num: usize = a.cil.getCilSize();
+    const num: usize = a.cilgen.getCilSize();
     while(idx < num) : (idx += 1) {
-        const cil = a.cil.getCil(idx);
+        const cil = a.cilgen.getCil(idx);
 
         switch (cil.tag) {
             Cil.Tag.cil_pop => {
                 _ = try stdout.print("  pop {s}\n", .{ getCilRegisterName(@intToEnum(CilRegister, cil.lhs)) });
+            },
+            Cil.Tag.cil_push_lvar => {
+                const ident = try a.cilgen.getIdent(cil.lhs);
+                _ = try stdout.writeAll("  mov rax, rbp\n");
+                _ = try stdout.print("  sub rax, {}\n", .{ ident.offset });
+                _ = try stdout.writeAll("  push rax\n");
+
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  mov rax, [rax]\n");
+                _ = try stdout.writeAll("  push rax\n");
             },
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
@@ -150,6 +160,10 @@ fn getCilRegisterName(reg: CilRegister) [:0]const u8 {
         CilRegister.r9 => "r9",
     };
 }
+
+pub const Scope = struct {
+
+};
 
 const CilGen = @import("./CIlGen.zig");
 const Cil = CilGen.Cil;

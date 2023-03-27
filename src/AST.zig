@@ -58,6 +58,14 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
     };
 }
 
+pub fn getNodeToken(ast: *Ast, idx: usize) []const u8{
+    const main_token = ast.nodes.items(.main_token)[idx];
+    const tkidx = ast.tokens.items(.start)[main_token];
+    var tokenizer = Tokenizer.init(ast.source);
+
+    return tokenizer.getSlice(tkidx);
+}
+
 pub fn getNodeTag(ast: *Ast, idx: usize) Node.Tag {
     return ast.nodes.items(.tag)[idx];
 }

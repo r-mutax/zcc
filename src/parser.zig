@@ -400,6 +400,13 @@ fn parsePrimary(p: *Parser) Error!usize {
             try p.expectToken(Token.Tag.tk_r_paren);
             return node;
         },
+        .tk_identifier => {
+            return try p.addNode(.{
+                .tag = .nd_lvar,
+                .main_token = p.nextToken(),
+                .data = 0,
+            });
+        },
         else => {
             return TokenError.UnexpectedToken;
         },

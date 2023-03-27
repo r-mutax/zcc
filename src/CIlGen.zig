@@ -1,12 +1,18 @@
 // CIlGen is C Intermediate Language.
 
 pub const CilList = std.MultiArrayList(CilGen.Cil);
+pub const IdentList = std.MultiArrayList(CilGen.Ident);
+pub const ScopeList = std.MultiArrayList(CilGen.Scope);
 
 ast: Ast = undefined,
 gpa: Allocator,
 cils: CilList = undefined,
 cilidx: usize = 0,
 label: u32 = 0,
+idents: IdentList = undefined,
+scopes: ScopeList = undefined,
+scpidx: usize = 0,
+memory: u32 = 0,
 
 pub fn init(ast: Ast, gpa: Allocator) !CilGen {
     return CilGen {
@@ -21,6 +27,8 @@ pub fn deinit(c: *CilGen) void {
 
 pub fn generate(c: *CilGen) !void {
     c.cils = CilList{};
+    c.idents = IdentList{};
+    c.scopes = ScopeList{};
 
     try c.gen_program(c.ast.root);
 }
@@ -51,9 +59,40 @@ fn getLabelNo(c: *CilGen) u32 {
     return result;
 }
 
+pub fn getIdent(c:*CilGen, ino: usize) !Ident {
+    return c.idents.get(ino);
+}
+
+pub fn getMemorySize(c: *CilGen) u32 {
+    return c.memory;
+}
+
+fn newScope(c: *CilGen) !void {
+    try c.scopes.append(c.gpa, .{
+        .identmap = IdentMap.init(c.gpa),
+    });
+    c.scpidx = c.scopes.len - 1;
+}
+
+fn searchIdent(c: *CilGen, ident: []const u8) !usize {
+    var scope = c.scopes.get(c.scpidx);
+    const i = scope.identmap.get(ident) orelse {
+        const pos = c.idents.len;
+        try c.idents.append(c.gpa, .{
+            .tag = .local,
+            .size = 4,
+            .offset = c.memory,
+        });
+        c.memory += 4;
+        try scope.identmap.put(ident, pos);
+        return pos;
+    };
+    return i;
+}
+
 fn gen_program(c: *CilGen, node: usize) !void {
     const rng = c.ast.getNodeExtraList(node);
-
+    try c.newScope();
     for( rng ) | idx | {
         try c.gen_stmt(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
@@ -76,6 +115,12 @@ fn gen(c: *CilGen, node: usize) !void {
     switch(c.ast.getNodeTag(node)){
         .nd_num => {
             try c.addCil(.cil_push_imm, @intCast(u32, c.ast.getNodeNumValue(node)), 0);
+            return;
+        },
+        .nd_lvar => {
+            const ident = c.ast.getNodeToken(node);
+            const ino = try c.searchIdent(ident);
+            try c.addCil(.cil_push_lvar, @intCast(u32, ino), 0);
             return;
         },
         .nd_negation => {
@@ -191,6 +236,9 @@ pub const Cil = struct{
         //            5  r8
         //            6  r9
         
+        cil_push_lvar,
+        // local variable push to stack
+
         cil_push_imm,
         // push immidiate
         
@@ -229,6 +277,7 @@ pub const Cil = struct{
 
         cil_return,
         // return stack top value
+
     };
 
     tag: Tag,
@@ -236,10 +285,24 @@ pub const Cil = struct{
     rhs: u32 = undefined,
 };
 
+pub const Ident = struct {
+    pub const Tag = enum {
+        local,
+    };
+    tag: Tag,
+    size: u32,
+    offset: u32,
+};
+
+pub const Scope = struct {
+    identmap : IdentMap,
+};
+
 const std = @import("std");
 const CilGen = @This();
 const Ast = @import("./AST.zig");
 const Node = Ast.Node;
+const IdentMap = std.StringHashMap(usize);
 
 const Allocator = std.mem.Allocator;
 const stdout = std.io.getStdOut().writer();
