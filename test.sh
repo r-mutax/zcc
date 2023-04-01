@@ -47,3 +47,6 @@ assert 0 "return 0 || 0;"
 
 # variable
 assert 0 "return abc;"
+assert 5 "abc= 5;return abc;"
+assert 6 "a=2;b=3;return a * b;"
+

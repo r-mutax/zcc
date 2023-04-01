@@ -35,15 +35,19 @@ pub fn genAsm(a: *AsmGen) !void {
             Cil.Tag.cil_pop => {
                 _ = try stdout.print("  pop {s}\n", .{ getCilRegisterName(@intToEnum(CilRegister, cil.lhs)) });
             },
-            Cil.Tag.cil_push_lvar => {
-                const ident = try a.cilgen.getIdent(cil.lhs);
+            Cil.Tag.cil_load_lvar => {
                 _ = try stdout.writeAll("  mov rax, rbp\n");
-                _ = try stdout.print("  sub rax, {}\n", .{ ident.offset });
-                _ = try stdout.writeAll("  push rax\n");
-
-                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.print("  sub rax, {}\n", .{ cil.lhs });
                 _ = try stdout.writeAll("  mov rax, [rax]\n");
                 _ = try stdout.writeAll("  push rax\n");
+            },
+            Cil.Tag.cil_store_lvar => {
+                _ = try stdout.writeAll("  pop rax\n");
+
+                _ = try stdout.writeAll("  mov rdi, rbp\n");
+                _ = try stdout.print("  sub rdi, {}\n", .{ cil.lhs });
+                _ = try stdout.writeAll("  mov [rdi], rax\n");
+                _ = try stdout.writeAll("  push rax\n");               
             },
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
