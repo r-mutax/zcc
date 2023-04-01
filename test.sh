@@ -52,4 +52,5 @@ assert 6 "a=2;b=3;return a * b;"
 # if statement
 assert 10 "if(1) return 10; return 10;"
 assert 20 "if(0) return 10; return 20;"
+assert 23 "if(0) return 10; else return 23; return 30;"
 

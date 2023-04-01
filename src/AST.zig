@@ -136,7 +136,7 @@ pub const Node = struct {
         nd_if_simple,
             // if statement
         nd_if,
-        nd_then_else,
+        nd_if_else,
             // if statement and then block and else block
         nd_while,
             // while statement
@@ -183,8 +183,14 @@ pub const Node = struct {
     };
 
     pub const If = struct {
-        cond: usize,
-        body: usize,
+        cond_expr: usize,
+        then_stmt: usize,
+    };
+
+    pub const IfElse = struct {
+        cond_expr: usize,
+        then_stmt: usize,
+        else_stmt: usize,
     };
 };
 
