@@ -192,6 +192,11 @@ pub const Node = struct {
         then_stmt: usize,
         else_stmt: usize,
     };
+
+    pub const While = struct {
+        cond_expr : usize,
+        body_stmt : usize,
+    };
 };
 
 const std = @import("std");

@@ -54,3 +54,5 @@ assert 10 "if(1) return 10; return 10;"
 assert 20 "if(0) return 10; return 20;"
 assert 23 "if(0) return 10; else return 23; return 30;"
 
+# while statement
+assert 5 "a = 0; while(a < 5) a = a + 1; return a;"
