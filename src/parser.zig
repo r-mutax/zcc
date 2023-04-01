@@ -129,16 +129,30 @@ fn parseIfStatement(p: *Parser) Error!usize {
     try p.expectToken(.tk_l_paren);
     const cond = try p.parseExpr();
     try p.expectToken(.tk_r_paren);
-
     const body = try p.parseStmt();
-    return p.addNode(.{
-        .tag = .nd_if,
-        .main_token = main_token,
-        .data = try p.addExtra(Node.If{
-            .cond = cond,
-            .body = body,
-        }),
-    });
+
+    if(p.currentTokenTag() == .tk_else){
+        _ = p.nextToken();
+
+        return p.addNode(.{
+            .tag = .nd_if_else,
+            .main_token = main_token,
+            .data = try p.addExtra(Node.IfElse{
+                .cond_expr = cond,
+                .then_stmt = body,
+                .else_stmt = try p.parseStmt(),
+            }),
+        });
+    } else {
+        return p.addNode(.{
+            .tag = .nd_if,
+            .main_token = main_token,
+            .data = try p.addExtra(Node.If{
+                .cond_expr = cond,
+                .then_stmt = body,
+            }),
+        });
+    }
 }
 
 fn parseExpr(p: *Parser) !usize {

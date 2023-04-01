@@ -111,9 +111,24 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const extra = c.ast.getNodeExtra(node, Node.If);
 
             const l_end = c.getLabelNo();
-            try c.gen(extra.cond);
+            try c.gen(extra.cond_expr);
             try c.addCil(.cil_jz, l_end, 0);
-            try c.gen_stmt(extra.body);
+            try c.gen_stmt(extra.then_stmt);
+            try c.addCil(.cil_label, l_end, 0);
+        },
+        .nd_if_else => {
+            const extra = c.ast.getNodeExtra(node, Node.IfElse);
+
+            const l_else = c.getLabelNo();
+            const l_end = c.getLabelNo();
+
+            try c.gen(extra.cond_expr);
+            try c.addCil(.cil_jz, l_else, 0);
+            try c.gen_stmt(extra.then_stmt);
+            try c.addCil(.cil_jmp, l_end, 0);
+
+            try c.addCil(.cil_label, l_else, 0);
+            try c.gen_stmt(extra.else_stmt);
             try c.addCil(.cil_label, l_end, 0);
         },
         else => try c.gen(node),
