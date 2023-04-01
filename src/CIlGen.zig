@@ -74,20 +74,21 @@ fn newScope(c: *CilGen) !void {
     c.scpidx = c.scopes.len - 1;
 }
 
-fn searchIdent(c: *CilGen, ident: []const u8) !usize {
+fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
     var scope = c.scopes.get(c.scpidx);
     const i = scope.identmap.get(ident) orelse {
         const pos = c.idents.len;
         try c.idents.append(c.gpa, .{
             .tag = .local,
-            .size = 4,
+            .size = 8,
             .offset = c.memory,
         });
-        c.memory += 4;
+        c.memory += 8;
         try scope.identmap.put(ident, pos);
-        return pos;
+        c.scopes.set(c.scpidx, scope);
+        return c.idents.get(pos);
     };
-    return i;
+    return c.idents.get(i);
 }
 
 fn gen_program(c: *CilGen, node: usize) !void {
@@ -106,7 +107,7 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             try c.gen(extra.lhs);
             try c.addCil(.cil_return, 0, 0);
         },
-        else => try c.gen_stmt(node),
+        else => try c.gen(node),
     }
 }
 
@@ -119,8 +120,18 @@ fn gen(c: *CilGen, node: usize) !void {
         },
         .nd_lvar => {
             const ident = c.ast.getNodeToken(node);
-            const ino = try c.searchIdent(ident);
-            try c.addCil(.cil_push_lvar, @intCast(u32, ino), 0);
+            const i = try c.searchIdent(ident);
+            try c.addCil(.cil_load_lvar, @intCast(u32, i.offset), @intCast(u32, i.size));
+            return;
+        },
+        .nd_assign => {
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+            try c.gen(extra.rhs);
+
+            const ident = c.ast.getNodeToken(extra.lhs);
+            const i = try c.searchIdent(ident);
+
+            try c.addCil(.cil_store_lvar, @intCast(u32, i.offset), @intCast(u32, i.size));
             return;
         },
         .nd_negation => {
@@ -236,8 +247,15 @@ pub const Cil = struct{
         //            5  r8
         //            6  r9
         
-        cil_push_lvar,
-        // local variable push to stack
+        cil_load_lvar,
+        // load to stack lvar
+        // lhs : offset
+        // rhs : size
+        
+        cil_store_lvar,
+        // store to lvar from stack
+        // lhs : offset
+        // rhs : size
 
         cil_push_imm,
         // push immidiate
