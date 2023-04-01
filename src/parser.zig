@@ -62,9 +62,10 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 
 // program = stmt*
 // stmt = expr ";" |
-//          "return" expr ";"
-//          'if' '(' expr ')' stmt 
-//          'while' '(' expr ')' stmt
+//          "return" expr ";" |
+//          'if' '(' expr ')' stmt |
+//          'while' '(' expr ')' stmt |
+//          'for' '(' expr ';' expr ';' expr ')' stmt
 // expr = assignment
 // assignment = logicOr ("=" assignment)? 
 // logicOr = logicAnd ("||" logicAnd)*
@@ -105,6 +106,7 @@ fn parseStmt(p: *Parser) !usize {
         .tk_return => try p.parseReturnStmt(),
         .tk_if => try p.parseIfStmt(),
         .tk_while => try p.parseWhileStmt(),
+        .tk_for => try p.parseForStmt(),
         else => {
             const lhs = try p.parseExpr();
             try p.expectToken(.tk_semicoron);
@@ -170,6 +172,28 @@ fn parseWhileStmt(p: *Parser) Error!usize {
             .cond_expr = cond_expr,
             .body_stmt = try p.parseStmt(),
         })
+    });
+}
+
+fn parseForStmt(p: *Parser) Error!usize {
+    const main_token = p.nextToken();
+    try p.expectToken(.tk_l_paren);
+    const init_expr = try p.parseExpr();
+    try p.expectToken(.tk_semicoron);
+    const cond_expr = try p.parseExpr();
+    try p.expectToken(.tk_semicoron);
+    const itr_expr = try p.parseExpr();
+    try p.expectToken(.tk_r_paren);
+
+    return p.addNode(.{
+        .tag = .nd_for,
+        .main_token = main_token,
+        .data = try p.addExtra(Node.For{
+            .init_expr = init_expr,
+            .cond_expr = cond_expr,
+            .itr_expr = itr_expr,
+            .body_stmt = try p.parseStmt(),
+        }),
     });
 }
 
