@@ -197,6 +197,13 @@ pub const Node = struct {
         cond_expr : usize,
         body_stmt : usize,
     };
+
+    pub const For = struct {
+        init_expr : usize,
+        cond_expr : usize,
+        itr_expr: usize,
+        body_stmt : usize,
+    };
 };
 
 const std = @import("std");
