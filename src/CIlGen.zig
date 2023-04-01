@@ -107,6 +107,15 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             try c.gen(extra.lhs);
             try c.addCil(.cil_return, 0, 0);
         },
+        .nd_if => {
+            const extra = c.ast.getNodeExtra(node, Node.If);
+
+            const l_end = c.getLabelNo();
+            try c.gen(extra.cond);
+            try c.addCil(.cil_jz, l_end, 0);
+            try c.gen_stmt(extra.body);
+            try c.addCil(.cil_label, l_end, 0);
+        },
         else => try c.gen(node),
     }
 }
