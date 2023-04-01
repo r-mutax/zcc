@@ -181,6 +181,11 @@ pub const Node = struct {
     pub const Function = struct {
         body: usize,
     };
+
+    pub const If = struct {
+        cond: usize,
+        body: usize,
+    };
 };
 
 const std = @import("std");
