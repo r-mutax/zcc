@@ -12,16 +12,7 @@ pub fn init(cilgen: CilGen) AsmGen {
 pub fn generate(a: *AsmGen) !void {
 
     _ = try stdout.writeAll(".intel_syntax noprefix\n");
-    _ = try stdout.writeAll(".global main\n");
-    _ = try stdout.writeAll("main:\n");
-    _ = try stdout.writeAll("  push rbp\n");
-    _ = try stdout.writeAll("  mov rbp, rsp\n");
-
-    _ = try stdout.print("  sub rsp, {}\n", .{ ((a.cilgen.getMemorySize() + 15) / 16) * 16});    try a.genAsm();
-
-    _ = try stdout.writeAll("  mov rsp, rbp\n");
-    _ = try stdout.writeAll("  pop rbp\n");
-    _ = try stdout.writeAll("  ret\n");
+    try a.genAsm();
 }
 
 pub fn genAsm(a: *AsmGen) !void {
@@ -124,6 +115,21 @@ pub fn genAsm(a: *AsmGen) !void {
             },
             .cil_label => {
                 _ = try stdout.print(".L{}:\n", .{cil.lhs});
+            },
+            Cil.Tag.cil_fn_start => {
+                var cilgen = a.cilgen;
+                var ast = cilgen.ast;
+                const ident = ast.getNodeToken(cil.lhs);
+                _ = try stdout.print(".global {s}\n", .{ ident });
+                _ = try stdout.print("{s}:\n", .{ ident });
+                _ = try stdout.writeAll("  push rbp\n");
+                _ = try stdout.writeAll("  mov rbp, rsp\n");
+                _ = try stdout.print("  sub rsp, {}\n", .{ ((cil.rhs + 15) / 16) * 16});
+            },
+            Cil.Tag.cil_fn_end => {
+                _ = try stdout.writeAll("  mov rsp, rbp\n");
+                _ = try stdout.writeAll("  pop rbp\n");
+                _ = try stdout.writeAll("  ret\n");
             },
             .cil_jmp => {
                 _ = try stdout.print("  jmp .L{}\n", .{cil.lhs});
