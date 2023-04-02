@@ -65,7 +65,9 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 //          "return" expr ";" |
 //          'if' '(' expr ')' stmt |
 //          'while' '(' expr ')' stmt |
-//          'for' '(' expr ';' expr ';' expr ')' stmt
+//          'for' '(' expr ';' expr ';' expr ')' stmt | 
+//          compound_statement
+// compound_statement = '{' stmt* '}'
 // expr = assignment
 // assignment = logicOr ("=" assignment)? 
 // logicOr = logicAnd ("||" logicAnd)*
@@ -107,6 +109,7 @@ fn parseStmt(p: *Parser) !usize {
         .tk_if => try p.parseIfStmt(),
         .tk_while => try p.parseWhileStmt(),
         .tk_for => try p.parseForStmt(),
+        .tk_l_brace => try p.parseCompoundStmt(),
         else => {
             const lhs = try p.parseExpr();
             try p.expectToken(.tk_semicoron);
@@ -194,6 +197,25 @@ fn parseForStmt(p: *Parser) Error!usize {
             .itr_expr = itr_expr,
             .body_stmt = try p.parseStmt(),
         }),
+    });
+}
+
+fn parseCompoundStmt(p: *Parser) Error!usize{
+    const main_token = p.nextToken();
+    
+    var stmts = std.ArrayList(usize).init(p.gpa);
+    defer stmts.deinit();
+
+    while (p.currentTokenTag() != .tk_r_brace) {
+        try stmts.append(try p.parseStmt());
+    }
+    _ = p.nextToken();
+
+    const rng = try p.addExtraList(try stmts.toOwnedSlice());
+    return p.addNode(.{
+        .tag = .nd_block,
+        .main_token = main_token,
+        .data = try p.addExtra(rng),
     });
 }
 

@@ -67,33 +67,47 @@ pub fn getMemorySize(c: *CilGen) u32 {
     return c.memory;
 }
 
-fn newScope(c: *CilGen) !void {
+fn startScope(c: *CilGen) !void {
     try c.scopes.append(c.gpa, .{
         .identmap = IdentMap.init(c.gpa),
     });
     c.scpidx = c.scopes.len - 1;
 }
 
+fn endScope(c: *CilGen) !void {
+    _ = c.scopes.pop();
+    c.scpidx -= 1;
+}
+
 fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
+    var idx : usize = 0;
+    while(idx <= c.scpidx) : (idx += 1) {
+        var scope = c.scopes.get(c.scpidx - idx);
+        const i = scope.identmap.get(ident);
+        if(i) |p| {
+            const result = c.idents.get(p);
+            return result;
+        }
+    }
+
+    // not found ident
+    const pos = c.idents.len;
+    try c.idents.append(c.gpa, .{
+        .tag = .local,
+        .size = 8,
+        .offset = c.memory,
+    });
+    c.memory += 8;
     var scope = c.scopes.get(c.scpidx);
-    const i = scope.identmap.get(ident) orelse {
-        const pos = c.idents.len;
-        try c.idents.append(c.gpa, .{
-            .tag = .local,
-            .size = 8,
-            .offset = c.memory,
-        });
-        c.memory += 8;
-        try scope.identmap.put(ident, pos);
-        c.scopes.set(c.scpidx, scope);
-        return c.idents.get(pos);
-    };
-    return c.idents.get(i);
+    try scope.identmap.put(ident, pos);
+    c.scopes.set(c.scpidx, scope);
+
+    return c.idents.get(pos);
 }
 
 fn gen_program(c: *CilGen, node: usize) !void {
     const rng = c.ast.getNodeExtraList(node);
-    try c.newScope();
+    try c.startScope();
     for( rng ) | idx | {
         try c.gen_stmt(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
@@ -158,6 +172,15 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             try c.gen(extra.itr_expr);
             try c.addCil(.cil_jmp, l_start, 0);
             try c.addCil(.cil_label, l_end, 0);
+        },
+        .nd_block => {
+            const rng = c.ast.getNodeExtraList(node);
+            try c.startScope();
+            for( rng ) | idx | {
+                try c.gen_stmt(idx);
+                try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
+            }
+            try c.endScope();
         },
         else => try c.gen(node),
     }
