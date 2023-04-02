@@ -60,3 +60,4 @@ assert 5 "main(){a = 0; while(a < 5) a = a + 1; return a;}"
 
 # for statement
 assert 3 "main(){a = 0; for(a = 1; a < 3; a = a + 1) b = 0; return a;}"
+assert 5 "funcA(){return 5;} main(){ return funcA(); }"

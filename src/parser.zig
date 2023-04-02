@@ -530,11 +530,24 @@ fn parsePrimary(p: *Parser) Error!usize {
             return node;
         },
         .tk_identifier => {
-            return try p.addNode(.{
-                .tag = .nd_lvar,
-                .main_token = p.nextToken(),
-                .data = 0,
-            });
+            const main_token = p.nextToken();
+            if(p.currentTokenTag() == .tk_l_paren){
+                // function call
+                try p.expectToken(.tk_l_paren);
+                try p.expectToken(.tk_r_paren);
+                return try p.addNode(.{
+                    .tag = .nd_call_function_noargs,
+                    .main_token = main_token,
+                    .data = 0,
+                });
+            } else {
+                // variable
+                return try p.addNode(.{
+                    .tag = .nd_lvar,
+                    .main_token = main_token,
+                    .data = 0,
+                });
+            }
         },
         else => {
             return TokenError.UnexpectedToken;
