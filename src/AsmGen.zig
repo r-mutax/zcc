@@ -149,7 +149,14 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  mov rsp, rbp\n");
                 _ = try stdout.writeAll("  pop rbp\n");
                 _ = try stdout.writeAll("  ret\n");
-            }
+            },
+            Cil.Tag.cil_fn_call_noargs => {
+                var cilgen = a.cilgen;
+                var ast = cilgen.ast;
+                const ident = ast.getNodeToken(cil.lhs);
+                _ = try stdout.print("  call {s}\n", .{ ident });
+                _ = try stdout.writeAll("  push rax\n");
+            },
         }
     }
 }

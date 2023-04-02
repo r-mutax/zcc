@@ -224,6 +224,10 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_load_lvar, @intCast(u32, i.offset), @intCast(u32, i.size));
             return;
         },
+        .nd_call_function_noargs => {
+            try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0);
+            return;
+        },
         .nd_assign => {
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.rhs);
@@ -402,6 +406,9 @@ pub const Cil = struct{
         cil_fn_start,
         cil_fn_end,
         // identify label(lhs = token idx)
+
+        cil_fn_call_noargs,
+        // calling function(lhs = token idx of func name)
     };
 
     tag: Tag,
