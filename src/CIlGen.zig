@@ -59,19 +59,11 @@ fn getLabelNo(c: *CilGen) u32 {
     return result;
 }
 
-pub fn getIdent(c:*CilGen, ino: usize) !Ident {
-    return c.idents.get(ino);
-}
-
-pub fn getMemorySize(c: *CilGen) u32 {
-    return c.memory;
-}
-
 fn startScope(c: *CilGen) !void {
+    c.scpidx = c.scopes.len;
     try c.scopes.append(c.gpa, .{
         .identmap = IdentMap.init(c.gpa),
     });
-    c.scpidx = c.scopes.len - 1;
 }
 
 fn endScope(c: *CilGen) !void {
@@ -105,13 +97,46 @@ fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
     return c.idents.get(pos);
 }
 
+pub fn getIdent(c:*CilGen, ino: usize) !Ident {
+    return c.idents.get(ino);
+}
+
+pub fn getMemorySize(c: *CilGen) u32 {
+    return c.memory;
+}
+
+pub fn appendIdent(c: *CilGen, ident: []const u8, data: Ident) !usize {
+    const pos = c.idents.len;
+    try c.idents.append(c.gpa, data);
+    if(data.tag != .function){
+        c.memory += data.size;
+    }
+    try c.scopes.items(.identmap)[c.scpidx].put(ident, pos);
+    return pos;
+} 
+
 fn gen_program(c: *CilGen, node: usize) !void {
-    const rng = c.ast.getNodeExtraList(node);
     try c.startScope();
+    const rng = c.ast.getNodeExtraList(node);
     for( rng ) | idx | {
-        try c.gen_stmt(idx);
+        try c.gen_function(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
     }
+}
+
+fn gen_function(c: *CilGen, node: usize) !void {
+    c.memory = 0;
+    
+    const pos = c.cils.len;
+    try c.addCil(.cil_fn_start, @intCast(u32, node), c.memory);
+
+    const extra = c.ast.getNodeExtra(node, Node.Function);
+    try c.startScope();
+    try c.gen_stmt(extra.body);
+    try c.endScope();
+
+    c.cils.items(.rhs)[pos] = c.memory;
+    try c.addCil(.cil_fn_end, 0, 0);    
 }
 
 fn gen_stmt(c: *CilGen, node: usize) !void {
@@ -358,7 +383,7 @@ pub const Cil = struct{
         cil_bit_and,
         cil_bit_xor,
         cil_bit_or,
-        cil_label,
+        
         cil_jz,
         // if stack top is 0, then jamp to lhs
         
@@ -371,6 +396,12 @@ pub const Cil = struct{
         cil_return,
         // return stack top value
 
+        cil_label,
+        // file scope label
+
+        cil_fn_start,
+        cil_fn_end,
+        // identify label(lhs = token idx)
     };
 
     tag: Tag,
@@ -381,6 +412,7 @@ pub const Cil = struct{
 pub const Ident = struct {
     pub const Tag = enum {
         local,
+        func,
     };
     tag: Tag,
     size: u32,

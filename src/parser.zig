@@ -60,7 +60,8 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     };
 }
 
-// program = stmt*
+// program = function*
+// function = ident '(' ')' compound_statement
 // stmt = expr ";" |
 //          "return" expr ";" |
 //          'if' '(' expr ')' stmt |
@@ -87,13 +88,13 @@ pub fn parse(p: *Parser) void {
 }
 
 fn parseProgram(p: *Parser) Error!usize {
-    var stmts = std.ArrayList(usize).init(p.gpa);
-    defer stmts.deinit();
+    var functions = std.ArrayList(usize).init(p.gpa);
+    defer functions.deinit();
 
     while (p.currentTokenTag() != .tk_eof) {
-        try stmts.append(try p.parseStmt());
+        try functions.append(try p.parseFunction());
     }
-    const rng = try p.addExtraList(try stmts.toOwnedSlice());
+    const rng = try p.addExtraList(try functions.toOwnedSlice());
     const root = try p.addNode(.{
         .tag = .nd_program,
         .main_token = 0,
@@ -101,6 +102,21 @@ fn parseProgram(p: *Parser) Error!usize {
     });
 
     return root;
+}
+
+fn parseFunction(p: *Parser) Error!usize {
+    const main_token = p.nextToken();
+    try p.expectToken(.tk_l_paren);
+    try p.expectToken(.tk_r_paren);
+    const body = try p.parseCompoundStmt();
+
+    return p.addNode(.{
+        .tag = .nd_fn_proto,
+        .main_token = main_token,
+        .data = try p.addExtra(Node.Function{
+            .body = body,
+        }),
+    });
 }
 
 fn parseStmt(p: *Parser) !usize {
