@@ -45,11 +45,12 @@ pub fn getCilSize(c: *CilGen) usize {
     return c.cils.slice().len;
 }
 
-fn addCil(c: *CilGen, tag: Cil.Tag, lhs: u32, rhs: u32) !void {
+fn addCil(c: *CilGen, tag: Cil.Tag, lhs: u32, rhs: u32, size: usize) !void {
     try c.cils.append(c.gpa, Cil{
         .tag = tag,
         .lhs = lhs,
         .rhs = rhs,
+        .size = size,
     });
 }
 
@@ -108,7 +109,7 @@ pub fn getMemorySize(c: *CilGen) u32 {
 pub fn appendIdent(c: *CilGen, ident: []const u8, data: Ident) !usize {
     const pos = c.idents.len;
     try c.idents.append(c.gpa, data);
-    if(data.tag != .function){
+    if(data.tag != .func){
         c.memory += data.size;
     }
     try c.scopes.items(.identmap)[c.scpidx].put(ident, pos);
@@ -117,10 +118,11 @@ pub fn appendIdent(c: *CilGen, ident: []const u8, data: Ident) !usize {
 
 fn gen_program(c: *CilGen, node: usize) !void {
     try c.startScope();
-    const rng = c.ast.getNodeExtraList(node);
+    const extra = c.ast.getNodeExtra(node, Node.Range);
+    const rng = c.ast.getNodeExtraList(extra.start, extra.end);
     for( rng ) | idx | {
         try c.gen_function(idx);
-        try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
+        try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
     }
 }
 
@@ -128,15 +130,35 @@ fn gen_function(c: *CilGen, node: usize) !void {
     c.memory = 0;
     
     const pos = c.cils.len;
-    try c.addCil(.cil_fn_start, @intCast(u32, node), c.memory);
+    try c.addCil(.cil_fn_start, @intCast(u32, node), c.memory, 0);
 
-    const extra = c.ast.getNodeExtra(node, Node.Function);
     try c.startScope();
+
+    // argument parse
+    const extra = c.ast.getNodeExtra(node, Node.Function);
+    if(extra.args_s != extra.args_e){
+
+        const rng = c.ast.getNodeExtraList(extra.args_s, extra.args_e);
+        var i: u32 = 0;
+        for(rng) | r | {
+            const ident = c.ast.getNodeToken(r);
+            _ = try c.appendIdent(ident, Ident{
+                .tag = .local,
+                .size = 8,
+                .offset = c.memory,
+            });
+            try c.addCil(.cil_store_arg, i + 1, c.memory - 8, 0);
+            // try c.addCil(.cil_push, i + 1, 0, 0);
+            // try c.addCil(.cil_store_lvar, c.memory - 8, 0, 8);
+            i += 1;
+        } 
+    }
+
     try c.gen_stmt(extra.body);
     try c.endScope();
 
     c.cils.items(.rhs)[pos] = c.memory;
-    try c.addCil(.cil_fn_end, 0, 0);    
+    try c.addCil(.cil_fn_end, 0, 0, 0);    
 }
 
 fn gen_stmt(c: *CilGen, node: usize) !void {
@@ -144,16 +166,16 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
         .nd_return => {
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.lhs);
-            try c.addCil(.cil_return, 0, 0);
+            try c.addCil(.cil_return, 0, 0, 0);
         },
         .nd_if => {
             const extra = c.ast.getNodeExtra(node, Node.If);
 
             const l_end = c.getLabelNo();
             try c.gen(extra.cond_expr);
-            try c.addCil(.cil_jz, l_end, 0);
+            try c.addCil(.cil_jz, l_end, 0, 0);
             try c.gen_stmt(extra.then_stmt);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
         },
         .nd_if_else => {
             const extra = c.ast.getNodeExtra(node, Node.IfElse);
@@ -162,13 +184,13 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const l_end = c.getLabelNo();
 
             try c.gen(extra.cond_expr);
-            try c.addCil(.cil_jz, l_else, 0);
+            try c.addCil(.cil_jz, l_else, 0, 0);
             try c.gen_stmt(extra.then_stmt);
-            try c.addCil(.cil_jmp, l_end, 0);
+            try c.addCil(.cil_jmp, l_end, 0, 0);
 
-            try c.addCil(.cil_label, l_else, 0);
+            try c.addCil(.cil_label, l_else, 0, 0);
             try c.gen_stmt(extra.else_stmt);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
         },
         .nd_while => {
             const extra = c.ast.getNodeExtra(node, Node.While);
@@ -176,12 +198,12 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const l_start = c.getLabelNo();
             const l_end = c.getLabelNo();
 
-            try c.addCil(.cil_label, l_start, 0);
+            try c.addCil(.cil_label, l_start, 0, 0);
             try c.gen(extra.cond_expr);
-            try c.addCil(.cil_jz, l_end, 0);
+            try c.addCil(.cil_jz, l_end, 0, 0);
             try c.gen(extra.body_stmt);
-            try c.addCil(.cil_jmp, l_start, 0);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_jmp, l_start, 0, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
         },
         .nd_for => {
             const extra = c.ast.getNodeExtra(node, Node.For);
@@ -190,20 +212,21 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const l_end = c.getLabelNo();
 
             try c.gen(extra.init_expr);
-            try c.addCil(.cil_label, l_start, 0);
+            try c.addCil(.cil_label, l_start, 0, 0);
             try c.gen(extra.cond_expr);
-            try c.addCil(.cil_jz, l_end, 0);
+            try c.addCil(.cil_jz, l_end, 0, 0);
             try c.gen(extra.body_stmt);
             try c.gen(extra.itr_expr);
-            try c.addCil(.cil_jmp, l_start, 0);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_jmp, l_start, 0, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
         },
         .nd_block => {
-            const rng = c.ast.getNodeExtraList(node);
+            const extra = c.ast.getNodeExtra(node, Node.Range);
+            const rng = c.ast.getNodeExtraList(extra.start, extra.end);
             try c.startScope();
             for( rng ) | idx | {
                 try c.gen_stmt(idx);
-                try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0);
+                try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
             }
             try c.endScope();
         },
@@ -215,17 +238,17 @@ fn gen(c: *CilGen, node: usize) !void {
 
     switch(c.ast.getNodeTag(node)){
         .nd_num => {
-            try c.addCil(.cil_push_imm, @intCast(u32, c.ast.getNodeNumValue(node)), 0);
+            try c.addCil(.cil_push_imm, @intCast(u32, c.ast.getNodeNumValue(node)), 0, 0);
             return;
         },
         .nd_lvar => {
             const ident = c.ast.getNodeToken(node);
             const i = try c.searchIdent(ident);
-            try c.addCil(.cil_load_lvar, @intCast(u32, i.offset), @intCast(u32, i.size));
+            try c.addCil(.cil_load_lvar, @intCast(u32, i.offset), 0, @intCast(u32, i.size));
             return;
         },
-        .nd_call_function_noargs => {
-            try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0);
+        .nd_call_function => {
+            try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0, 0);
             return;
         },
         .nd_assign => {
@@ -235,15 +258,15 @@ fn gen(c: *CilGen, node: usize) !void {
             const ident = c.ast.getNodeToken(extra.lhs);
             const i = try c.searchIdent(ident);
 
-            try c.addCil(.cil_store_lvar, @intCast(u32, i.offset), @intCast(u32, i.size));
+            try c.addCil(.cil_store_lvar, @intCast(u32, i.offset), @intCast(u32, i.size), 0);
             return;
         },
         .nd_negation => {
-            try c.addCil( .cil_push_imm, 0, 0);
+            try c.addCil( .cil_push_imm, 0, 0, 0);
 
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.lhs);
-            try c.addCil(.cil_sub, 0, 0);
+            try c.addCil(.cil_sub, 0, 0, 0);
             return;
         },
         .nd_logic_and => {
@@ -254,18 +277,18 @@ fn gen(c: *CilGen, node: usize) !void {
 
             // eval lhs
             try c.gen(extra.lhs);
-            try c.addCil(.cil_jz, l_false, 0);
+            try c.addCil(.cil_jz, l_false, 0, 0);
 
             // eval rhs
             try c.gen(extra.rhs);
-            try c.addCil(.cil_jz, l_false, 0);
+            try c.addCil(.cil_jz, l_false, 0, 0);
 
             // write result
-            try c.addCil(.cil_push_imm, 1, 0);
-            try c.addCil(.cil_jmp, l_end, 0);
-            try c.addCil(.cil_label, l_false, 0);
-            try c.addCil(.cil_push_imm, 0, 0);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_push_imm, 1, 0, 0);
+            try c.addCil(.cil_jmp, l_end, 0, 0);
+            try c.addCil(.cil_label, l_false, 0, 0);
+            try c.addCil(.cil_push_imm, 0, 0, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
             return;
         },
         .nd_logic_or => {
@@ -276,18 +299,18 @@ fn gen(c: *CilGen, node: usize) !void {
 
             // eval lhs
             try c.gen(extra.lhs);
-            try c.addCil(.cil_jnz, l_true, 0);
+            try c.addCil(.cil_jnz, l_true, 0, 0);
 
             // eval rhs
             try c.gen(extra.rhs);
-            try c.addCil(.cil_jnz, l_true, 0);
+            try c.addCil(.cil_jnz, l_true, 0, 0);
 
             // write result
-            try c.addCil(.cil_push_imm, 0, 0);
-            try c.addCil(.cil_jmp, l_end, 0);
-            try c.addCil(.cil_label, l_true, 0);
-            try c.addCil(.cil_push_imm, 1, 0);
-            try c.addCil(.cil_label, l_end, 0);
+            try c.addCil(.cil_push_imm, 0, 0, 0);
+            try c.addCil(.cil_jmp, l_end, 0, 0);
+            try c.addCil(.cil_label, l_true, 0, 0);
+            try c.addCil(.cil_push_imm, 1, 0, 0);
+            try c.addCil(.cil_label, l_end, 0, 0);
             return;
         },
         else => { },
@@ -299,37 +322,37 @@ fn gen(c: *CilGen, node: usize) !void {
 
     switch(c.ast.getNodeTag(node)){
         Node.Tag.nd_add => {
-            try c.addCil(.cil_add, 0, 0);
+            try c.addCil(.cil_add, 0, 0, 0);
         },
         Node.Tag.nd_sub => {
-            try c.addCil(.cil_sub, 0, 0);
+            try c.addCil(.cil_sub, 0, 0, 0);
         },
         Node.Tag.nd_mul => {
-            try c.addCil(.cil_mul, 0, 0);
+            try c.addCil(.cil_mul, 0, 0, 0);
         },
         Node.Tag.nd_div => {
-            try c.addCil(.cil_div, 0, 0);
+            try c.addCil(.cil_div, 0, 0, 0);
         },
         Node.Tag.nd_equal => {
-            try c.addCil(.cil_equal, 0, 0);
+            try c.addCil(.cil_equal, 0, 0, 0);
         },
         Node.Tag.nd_not_equal => {
-            try c.addCil(.cil_not_equal, 0, 0);
+            try c.addCil(.cil_not_equal, 0, 0, 0);
         },
         Node.Tag.nd_gt => {
-            try c.addCil(.cil_gt, 0, 0);
+            try c.addCil(.cil_gt, 0, 0, 0);
         },
         Node.Tag.nd_ge => {
-            try c.addCil(.cil_ge, 0, 0);
+            try c.addCil(.cil_ge, 0, 0, 0);
         },
         Node.Tag.nd_bit_and => {
-            try c.addCil(.cil_bit_and, 0, 0);
+            try c.addCil(.cil_bit_and, 0, 0, 0);
         },
         Node.Tag.nd_bit_xor => {
-            try c.addCil(.cil_bit_xor, 0, 0);
+            try c.addCil(.cil_bit_xor, 0, 0, 0);
         },
         Node.Tag.nd_bit_or => {
-            try c.addCil(.cil_bit_or, 0, 0);
+            try c.addCil(.cil_bit_or, 0, 0, 0);
         },
         else => {},
     }
@@ -351,6 +374,20 @@ pub const Cil = struct{
         //            5  r8
         //            6  r9
         
+        cil_push,
+        // push register...
+        //      lhs : 1
+        //      rhs : 0  rax
+        //            1  rdi
+        //            2  rsi
+        //            3  rdx
+        //            4  rcx
+        //            5  r8
+        //            6  r9
+
+        cil_store_arg,
+        // lhs : argno, rhs : offset
+
         cil_load_lvar,
         // load to stack lvar
         // lhs : offset
@@ -409,11 +446,13 @@ pub const Cil = struct{
 
         cil_fn_call_noargs,
         // calling function(lhs = token idx of func name)
+
     };
 
     tag: Tag,
     lhs: u32 = undefined,
     rhs: u32 = undefined,
+    size: usize = 0,
 };
 
 pub const Ident = struct {

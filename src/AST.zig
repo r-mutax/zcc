@@ -88,9 +88,8 @@ pub fn getNodeExtra(ast: *Ast, idx: usize, comptime T: type) T {
     return result;
 }
 
-pub fn getNodeExtraList(ast: *Ast, idx:usize) []const usize {
-    const rng = ast.getNodeExtra(idx, Node.Range);
-    const result = ast.extras[rng.start .. rng.end];
+pub fn getNodeExtraList(ast: *Ast, st: usize, en: usize) []const usize {
+    const result = ast.extras[st .. en];
     return result;
 }
 
@@ -144,10 +143,10 @@ pub const Node = struct {
             // for statement
         nd_block,
             // block statement
-        nd_call_function_noargs,
+        nd_call_function,
             // function call
-        nd_call_function_have_args,
-            // function call with argument
+        nd_args,
+            // function arguments
         nd_bit_and,
             // bitand
         nd_bit_xor,
@@ -180,6 +179,8 @@ pub const Node = struct {
 
     pub const Function = struct {
         body: usize,
+        args_s: usize,
+        args_e: usize,
     };
 
     pub const If = struct {

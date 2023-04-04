@@ -26,6 +26,9 @@ pub fn genAsm(a: *AsmGen) !void {
             Cil.Tag.cil_pop => {
                 _ = try stdout.print("  pop {s}\n", .{ getCilRegisterName(@intToEnum(CilRegister, cil.lhs)) });
             },
+            Cil.Tag.cil_push => {
+                _ = try stdout.print("  push {s}\n", .{ getCilRegisterName(@intToEnum(CilRegister, cil.lhs)) });
+            },
             Cil.Tag.cil_load_lvar => {
                 _ = try stdout.print("  mov rax, [rbp - {}]\n", .{ cil.lhs });
                 _ = try stdout.writeAll("  push rax\n");
@@ -34,6 +37,9 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.writeAll("  pop rax\n");
                 _ = try stdout.print("  mov [rbp - {}], rax\n", .{ cil.lhs });
                 _ = try stdout.writeAll("  push rax\n");               
+            },
+            Cil.Tag.cil_store_arg => {
+                _ = try stdout.print("  mov [rbp - {}], {s}\n", .{ cil.rhs, getCilRegisterName(@intToEnum(CilRegister, cil.lhs))});
             },
             Cil.Tag.cil_push_imm => {
                 _ = try stdout.print("  push {}\n", .{cil.lhs});
