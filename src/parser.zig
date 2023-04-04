@@ -107,14 +107,41 @@ fn parseProgram(p: *Parser) Error!usize {
 fn parseFunction(p: *Parser) Error!usize {
     const main_token = p.nextToken();
     try p.expectToken(.tk_l_paren);
+
+    var args = std.ArrayList(usize).init(p.gpa);
+    defer args.deinit();
+
+    if(p.currentTokenTag() != .tk_r_paren){
+        while(true){
+            if(p.currentTokenTag() != .tk_identifier){
+                break;
+            }
+
+            try args.append(try p.addNode(.{
+                .tag = .nd_args,
+                .main_token = p.nextToken(),
+                .data = 0
+            }));
+
+            if(p.currentTokenTag() != .tk_canma){
+                break;
+            }
+            _ = p.nextToken();
+        }
+    }
+
     try p.expectToken(.tk_r_paren);
     const body = try p.parseCompoundStmt();
+
+    const rng = try p.addExtraList(try args.toOwnedSlice());
 
     return p.addNode(.{
         .tag = .nd_fn_proto,
         .main_token = main_token,
         .data = try p.addExtra(Node.Function{
             .body = body,
+            .args_s = rng.start,
+            .args_e = rng.end,
         }),
     });
 }
@@ -536,7 +563,7 @@ fn parsePrimary(p: *Parser) Error!usize {
                 try p.expectToken(.tk_l_paren);
                 try p.expectToken(.tk_r_paren);
                 return try p.addNode(.{
-                    .tag = .nd_call_function_noargs,
+                    .tag = .nd_call_function,
                     .main_token = main_token,
                     .data = 0,
                 });
