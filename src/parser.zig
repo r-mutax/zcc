@@ -79,7 +79,7 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 // relational = add ("<" add | "<=" add | ">" add | ">=" add)*
 // add = multiple ( '+' multiple | `-` multiple )*
 // multiple = unary ( '*' unary | `/` unary )*
-// unary = ( "+" | "-" )? primary
+// unary = ( "+" | "-" )? primary | '&' unary
 // primary = num | ident | '(' expr ')`
 
 pub fn parse(p: *Parser) void {
@@ -537,6 +537,16 @@ fn parseUnary(p: *Parser) Error!usize {
                     .lhs = try p.parsePrimary(),
                     .rhs = 0,
                 }),
+            });
+        },
+        .tk_and => {
+            return p.addNode(.{
+                .tag = .nd_address,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = try p.parseUnary(),
+                    .rhs = 0,
+                })
             });
         },
         else => {
