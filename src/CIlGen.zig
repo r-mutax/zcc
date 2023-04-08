@@ -15,7 +15,7 @@ scpidx: usize = 0,
 memory: u32 = 0,
 
 pub fn init(ast: Ast, gpa: Allocator) !CilGen {
-    return CilGen {
+    return CilGen{
         .ast = ast,
         .gpa = gpa,
     };
@@ -73,24 +73,24 @@ fn endScope(c: *CilGen) !void {
 }
 
 fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
-    var idx : usize = 0;
-    while(idx <= c.scpidx) : (idx += 1) {
+    var idx: usize = 0;
+    while (idx <= c.scpidx) : (idx += 1) {
         var scope = c.scopes.get(c.scpidx - idx);
         const i = scope.identmap.get(ident);
-        if(i) |p| {
+        if (i) |p| {
             const result = c.idents.get(p);
             return result;
         }
     }
 
     // not found ident
+    c.memory += 8;
     const pos = c.idents.len;
     try c.idents.append(c.gpa, .{
         .tag = .local,
         .size = 8,
         .offset = c.memory,
     });
-    c.memory += 8;
     var scope = c.scopes.get(c.scpidx);
     try scope.identmap.put(ident, pos);
     c.scopes.set(c.scpidx, scope);
@@ -98,7 +98,7 @@ fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
     return c.idents.get(pos);
 }
 
-pub fn getIdent(c:*CilGen, ino: usize) !Ident {
+pub fn getIdent(c: *CilGen, ino: usize) !Ident {
     return c.idents.get(ino);
 }
 
@@ -109,18 +109,18 @@ pub fn getMemorySize(c: *CilGen) u32 {
 pub fn appendIdent(c: *CilGen, ident: []const u8, data: Ident) !usize {
     const pos = c.idents.len;
     try c.idents.append(c.gpa, data);
-    if(data.tag != .func){
+    if (data.tag != .func) {
         c.memory += data.size;
     }
     try c.scopes.items(.identmap)[c.scpidx].put(ident, pos);
     return pos;
-} 
+}
 
 fn gen_program(c: *CilGen, node: usize) !void {
     try c.startScope();
     const extra = c.ast.getNodeExtra(node, Node.Range);
     const rng = c.ast.getNodeExtraList(extra.start, extra.end);
-    for( rng ) | idx | {
+    for (rng) |idx| {
         try c.gen_function(idx);
         try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
     }
@@ -128,7 +128,7 @@ fn gen_program(c: *CilGen, node: usize) !void {
 
 fn gen_function(c: *CilGen, node: usize) !void {
     c.memory = 0;
-    
+
     const pos = c.cils.len;
     try c.addCil(.cil_fn_start, @intCast(u32, node), c.memory, 0);
 
@@ -136,33 +136,30 @@ fn gen_function(c: *CilGen, node: usize) !void {
 
     // argument parse
     const extra = c.ast.getNodeExtra(node, Node.Function);
-    if(extra.args_s != extra.args_e){
-
+    if (extra.args_s != extra.args_e) {
         const rng = c.ast.getNodeExtraList(extra.args_s, extra.args_e);
         var i: u32 = 0;
-        for(rng) | r | {
+        for (rng) |r| {
             const ident = c.ast.getNodeToken(r);
             _ = try c.appendIdent(ident, Ident{
                 .tag = .local,
                 .size = 8,
-                .offset = c.memory,
+                .offset = c.memory + 8,
             });
-            try c.addCil(.cil_store_arg, i + 1, c.memory - 8, 0);
-            // try c.addCil(.cil_push, i + 1, 0, 0);
-            // try c.addCil(.cil_store_lvar, c.memory - 8, 0, 8);
+            try c.addCil(.cil_store_arg, i + 1, c.memory, 0);
             i += 1;
-        } 
+        }
     }
 
     try c.gen_stmt(extra.body);
     try c.endScope();
 
     c.cils.items(.rhs)[pos] = c.memory;
-    try c.addCil(.cil_fn_end, 0, 0, 0);    
+    try c.addCil(.cil_fn_end, 0, 0, 0);
 }
 
 fn gen_stmt(c: *CilGen, node: usize) !void {
-    switch(c.ast.getNodeTag(node)){
+    switch (c.ast.getNodeTag(node)) {
         .nd_return => {
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.lhs);
@@ -224,7 +221,7 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const extra = c.ast.getNodeExtra(node, Node.Range);
             const rng = c.ast.getNodeExtraList(extra.start, extra.end);
             try c.startScope();
-            for( rng ) | idx | {
+            for (rng) |idx| {
                 try c.gen_stmt(idx);
                 try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
             }
@@ -235,8 +232,7 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
 }
 
 fn gen(c: *CilGen, node: usize) !void {
-
-    switch(c.ast.getNodeTag(node)){
+    switch (c.ast.getNodeTag(node)) {
         .nd_num => {
             try c.addCil(.cil_push_imm, @intCast(u32, c.ast.getNodeNumValue(node)), 0, 0);
             return;
@@ -251,6 +247,23 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0, 0);
             return;
         },
+        .nd_call_fn_with_params => {
+            const extra = c.ast.getNodeExtra(node, Node.Range);
+
+            // push to stack paramater expr
+            const rng = c.ast.getNodeExtraList(extra.start, extra.end);
+            for (rng) |idx| {
+                try c.gen(idx);
+            }
+
+            // stack to argument
+            for (rng, 0..) |_, idx| {
+                try c.addCil(.cil_pop, @intCast(u32, rng.len - idx), 0, 8);
+            }
+
+            try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0, 0);
+            return;
+        },
         .nd_assign => {
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.rhs);
@@ -262,7 +275,7 @@ fn gen(c: *CilGen, node: usize) !void {
             return;
         },
         .nd_negation => {
-            try c.addCil( .cil_push_imm, 0, 0, 0);
+            try c.addCil(.cil_push_imm, 0, 0, 0);
 
             const extra = c.ast.getNodeExtra(node, Node.Data);
             try c.gen(extra.lhs);
@@ -313,14 +326,14 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_label, l_end, 0, 0);
             return;
         },
-        else => { },
+        else => {},
     }
 
     const extra = c.ast.getNodeExtra(node, Node.Data);
     try c.gen(extra.lhs);
     try c.gen(extra.rhs);
 
-    switch(c.ast.getNodeTag(node)){
+    switch (c.ast.getNodeTag(node)) {
         Node.Tag.nd_add => {
             try c.addCil(.cil_add, 0, 0, 0);
         },
@@ -360,24 +373,22 @@ fn gen(c: *CilGen, node: usize) !void {
 
 pub const CilRegister = enum(u32) { rax, rdi, rsi, rdx, rcx, r8, r9 };
 
-pub const Cil = struct{
+pub const Cil = struct {
     pub const Tag = enum {
         cil_pop,
         // pop
         //  to register...
-        //      lhs : 1
-        //      rhs : 0  rax
+        //      lhs : 0  rax
         //            1  rdi
         //            2  rsi
         //            3  rdx
         //            4  rcx
         //            5  r8
         //            6  r9
-        
+
         cil_push,
         // push register...
-        //      lhs : 1
-        //      rhs : 0  rax
+        //      lhs : 0  rax
         //            1  rdi
         //            2  rsi
         //            3  rdx
@@ -392,7 +403,7 @@ pub const Cil = struct{
         // load to stack lvar
         // lhs : offset
         // rhs : size
-        
+
         cil_store_lvar,
         // store to lvar from stack
         // lhs : offset
@@ -400,37 +411,37 @@ pub const Cil = struct{
 
         cil_push_imm,
         // push immidiate
-        
+
         cil_add,
         // add stack top of 2
-        
+
         cil_sub,
         // sub stack top of 2
-        
+
         cil_mul,
         // multiple stack top of 2
-        
+
         cil_div,
         // divide stack top of 2
-        
+
         cil_equal,
         // if stack top of 2 is equal, push 1
-        
+
         cil_not_equal,
         // if stack top of 2 is not equal, push 1
-        
+
         cil_gt,
         cil_ge,
         cil_bit_and,
         cil_bit_xor,
         cil_bit_or,
-        
+
         cil_jz,
         // if stack top is 0, then jamp to lhs
-        
+
         cil_jnz,
         // if stack top is none zero, then jamp to lhs
-        
+
         cil_jmp,
         // jmp to lhs
 
@@ -466,7 +477,7 @@ pub const Ident = struct {
 };
 
 pub const Scope = struct {
-    identmap : IdentMap,
+    identmap: IdentMap,
 };
 
 const std = @import("std");
@@ -487,7 +498,7 @@ test "Code gen" {
     var cil = try CilGen.init(ast, std.heap.page_allocator);
     try cil.generate();
 
-    for(cil.cils.items(.tag)) |a| {
-        _ = try stdout.print("{}\n", .{ a });
+    for (cil.cils.items(.tag)) |a| {
+        _ = try stdout.print("{}\n", .{a});
     }
 }

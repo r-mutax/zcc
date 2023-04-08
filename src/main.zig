@@ -1,11 +1,9 @@
 const std = @import("std");
 
-
 pub fn main() !void {
     const args = std.os.argv;
-    if (args.len != 2) {
-    }
-    var src = args[1][0..countChars(args[1]) : 0];
+    if (args.len != 2) {}
+    var src = args[1][0..countChars(args[1]) :0];
 
     // generate AST
     var ast = try Ast.parse(src, std.heap.page_allocator);
@@ -24,8 +22,8 @@ pub fn main() !void {
 
 fn countChars(chars: [*:0]u8) usize {
     var i: usize = 0;
-    while(true){
-        if(chars[i] == 0){
+    while (true) {
+        if (chars[i] == 0) {
             return i;
         }
         i += 1;

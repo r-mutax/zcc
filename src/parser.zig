@@ -2,9 +2,9 @@ pub const Parser = @This();
 pub const Error = TokenError || Allocator.Error;
 
 gpa: Allocator,
-source: [:0] const u8,
+source: [:0]const u8,
 tokens: TokenList = undefined,
-tkidx: usize,                       // index of TokenList.
+tkidx: usize, // index of TokenList.
 nodes: NodeList = undefined,
 extras: ExtraDataList = undefined,
 root: usize = 0,
@@ -20,8 +20,8 @@ fn currentTokenTag(p: *Parser) Token.Tag {
     return p.tokens.items(.tag)[p.tkidx];
 }
 
-fn expectToken(p: *Parser, tag: Token.Tag) !void{
-    if(p.currentTokenTag() != tag){
+fn expectToken(p: *Parser, tag: Token.Tag) !void {
+    if (p.currentTokenTag() != tag) {
         return TokenError.UnexpectedToken;
     }
     _ = p.nextToken();
@@ -34,8 +34,7 @@ fn nextToken(self: *Parser) usize {
     return result;
 }
 
-
-fn addNode(p:*Parser, node: Node) !usize {
+fn addNode(p: *Parser, node: Node) !usize {
     const idx = p.nodes.len;
     try p.nodes.append(p.gpa, node);
     return idx;
@@ -46,7 +45,7 @@ fn addExtra(p: *Parser, extra: anytype) Allocator.Error!usize {
     try p.extras.ensureUnusedCapacity(fields.len);
 
     const result = @intCast(u32, p.extras.items.len);
-    inline for(fields) | field | {
+    inline for (fields) |field| {
         p.extras.appendAssumeCapacity(@field(extra, field.name));
     }
     return result;
@@ -54,7 +53,7 @@ fn addExtra(p: *Parser, extra: anytype) Allocator.Error!usize {
 
 fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
     try p.extras.appendSlice(list);
-    return Node.Range {
+    return Node.Range{
         .start = p.extras.items.len - list.len,
         .end = p.extras.items.len,
     };
@@ -66,11 +65,11 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 //          "return" expr ";" |
 //          'if' '(' expr ')' stmt |
 //          'while' '(' expr ')' stmt |
-//          'for' '(' expr ';' expr ';' expr ')' stmt | 
+//          'for' '(' expr ';' expr ';' expr ')' stmt |
 //          compound_statement
 // compound_statement = '{' stmt* '}'
 // expr = assignment
-// assignment = logicOr ("=" assignment)? 
+// assignment = logicOr ("=" assignment)?
 // logicOr = logicAnd ("||" logicAnd)*
 // logicAnd = bitOr ("&&" bitOr)*
 // bitOr = bitXor ("|" bitXor)*
@@ -111,19 +110,15 @@ fn parseFunction(p: *Parser) Error!usize {
     var args = std.ArrayList(usize).init(p.gpa);
     defer args.deinit();
 
-    if(p.currentTokenTag() != .tk_r_paren){
-        while(true){
-            if(p.currentTokenTag() != .tk_identifier){
+    if (p.currentTokenTag() != .tk_r_paren) {
+        while (true) {
+            if (p.currentTokenTag() != .tk_identifier) {
                 break;
             }
 
-            try args.append(try p.addNode(.{
-                .tag = .nd_args,
-                .main_token = p.nextToken(),
-                .data = 0
-            }));
+            try args.append(try p.addNode(.{ .tag = .nd_args, .main_token = p.nextToken(), .data = 0 }));
 
-            if(p.currentTokenTag() != .tk_canma){
+            if (p.currentTokenTag() != .tk_canma) {
                 break;
             }
             _ = p.nextToken();
@@ -147,7 +142,7 @@ fn parseFunction(p: *Parser) Error!usize {
 }
 
 fn parseStmt(p: *Parser) !usize {
-    return switch(p.currentTokenTag()){
+    return switch (p.currentTokenTag()) {
         .tk_return => try p.parseReturnStmt(),
         .tk_if => try p.parseIfStmt(),
         .tk_while => try p.parseWhileStmt(),
@@ -181,7 +176,7 @@ fn parseIfStmt(p: *Parser) Error!usize {
     try p.expectToken(.tk_r_paren);
     const body = try p.parseStmt();
 
-    if(p.currentTokenTag() == .tk_else){
+    if (p.currentTokenTag() == .tk_else) {
         _ = p.nextToken();
 
         return p.addNode(.{
@@ -211,14 +206,10 @@ fn parseWhileStmt(p: *Parser) Error!usize {
     const cond_expr = try p.parseExpr();
     try p.expectToken(.tk_r_paren);
 
-    return p.addNode(.{
-        .tag = .nd_while,
-        .main_token = main_token,
-        .data = try p.addExtra(Node.While{
-            .cond_expr = cond_expr,
-            .body_stmt = try p.parseStmt(),
-        })
-    });
+    return p.addNode(.{ .tag = .nd_while, .main_token = main_token, .data = try p.addExtra(Node.While{
+        .cond_expr = cond_expr,
+        .body_stmt = try p.parseStmt(),
+    }) });
 }
 
 fn parseForStmt(p: *Parser) Error!usize {
@@ -243,9 +234,9 @@ fn parseForStmt(p: *Parser) Error!usize {
     });
 }
 
-fn parseCompoundStmt(p: *Parser) Error!usize{
+fn parseCompoundStmt(p: *Parser) Error!usize {
     const main_token = p.nextToken();
-    
+
     var stmts = std.ArrayList(usize).init(p.gpa);
     defer stmts.deinit();
 
@@ -268,7 +259,7 @@ fn parseExpr(p: *Parser) !usize {
 
 fn parseAssignment(p: *Parser) !usize {
     var lhs = try p.parseLogicOr();
-    if(p.currentTokenTag() == .tk_assign){
+    if (p.currentTokenTag() == .tk_assign) {
         lhs = try p.addNode(.{
             .tag = .nd_assign,
             .main_token = p.nextToken(),
@@ -284,8 +275,8 @@ fn parseAssignment(p: *Parser) !usize {
 fn parseLogicOr(p: *Parser) !usize {
     var lhs = try p.parseLogicAnd();
 
-    while(true){
-        if(p.currentTokenTag() == .tk_pipe_pipe){
+    while (true) {
+        if (p.currentTokenTag() == .tk_pipe_pipe) {
             lhs = try p.addNode(.{
                 .tag = .nd_logic_or,
                 .main_token = p.nextToken(),
@@ -303,8 +294,8 @@ fn parseLogicOr(p: *Parser) !usize {
 fn parseLogicAnd(p: *Parser) !usize {
     var lhs = try p.parsebitOr();
 
-    while(true){
-        if(p.currentTokenTag() == .tk_and_and){
+    while (true) {
+        if (p.currentTokenTag() == .tk_and_and) {
             lhs = try p.addNode(.{
                 .tag = .nd_logic_and,
                 .main_token = p.nextToken(),
@@ -322,8 +313,8 @@ fn parseLogicAnd(p: *Parser) !usize {
 fn parsebitOr(p: *Parser) !usize {
     var lhs = try p.parsebitXor();
 
-    while(true){
-        if(p.currentTokenTag() == .tk_pipe){
+    while (true) {
+        if (p.currentTokenTag() == .tk_pipe) {
             lhs = try p.addNode(.{
                 .tag = .nd_bit_or,
                 .main_token = p.nextToken(),
@@ -341,8 +332,8 @@ fn parsebitOr(p: *Parser) !usize {
 fn parsebitXor(p: *Parser) !usize {
     var lhs = try p.parsebitAnd();
 
-    while(true){
-        if(p.currentTokenTag() == .tk_hat){
+    while (true) {
+        if (p.currentTokenTag() == .tk_hat) {
             lhs = try p.addNode(.{
                 .tag = .nd_bit_xor,
                 .main_token = p.nextToken(),
@@ -360,8 +351,8 @@ fn parsebitXor(p: *Parser) !usize {
 fn parsebitAnd(p: *Parser) !usize {
     var lhs = try p.parseEquality();
 
-    while(true){
-        if(p.currentTokenTag() == .tk_and){
+    while (true) {
+        if (p.currentTokenTag() == .tk_and) {
             lhs = try p.addNode(.{
                 .tag = .nd_bit_and,
                 .main_token = p.nextToken(),
@@ -379,8 +370,8 @@ fn parsebitAnd(p: *Parser) !usize {
 fn parseEquality(p: *Parser) !usize {
     var lhs = try p.parseRelational();
 
-    while(true){
-        switch(p.currentTokenTag()){
+    while (true) {
+        switch (p.currentTokenTag()) {
             .tk_equal => {
                 lhs = try p.addNode(.{
                     .tag = Node.Tag.nd_equal,
@@ -391,7 +382,7 @@ fn parseEquality(p: *Parser) !usize {
                     }),
                 });
             },
-            .tk_not_equal =>{
+            .tk_not_equal => {
                 lhs = try p.addNode(.{
                     .tag = Node.Tag.nd_not_equal,
                     .main_token = p.nextToken(),
@@ -401,7 +392,9 @@ fn parseEquality(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; },
+            else => {
+                return lhs;
+            },
         }
     }
 }
@@ -409,8 +402,8 @@ fn parseEquality(p: *Parser) !usize {
 fn parseRelational(p: *Parser) !usize {
     var lhs = try p.parseAdd();
 
-    while(true){
-        switch(p.currentTokenTag()){
+    while (true) {
+        switch (p.currentTokenTag()) {
             .tk_l_angle_bracket => {
                 lhs = try p.addNode(.{
                     .tag = Node.Tag.nd_gt,
@@ -451,7 +444,9 @@ fn parseRelational(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; },
+            else => {
+                return lhs;
+            },
         }
     }
 }
@@ -459,8 +454,8 @@ fn parseRelational(p: *Parser) !usize {
 fn parseAdd(p: *Parser) !usize {
     var lhs = try p.parseMultiple();
 
-    while(true) {
-        switch(p.currentTokenTag()){
+    while (true) {
+        switch (p.currentTokenTag()) {
             Token.Tag.tk_add => {
                 lhs = try p.addNode(.{
                     .tag = Node.Tag.nd_add,
@@ -491,8 +486,8 @@ fn parseAdd(p: *Parser) !usize {
 fn parseMultiple(p: *Parser) !usize {
     var lhs = try p.parseUnary();
 
-    while(true){
-        switch(p.currentTokenTag()){
+    while (true) {
+        switch (p.currentTokenTag()) {
             .tk_mul => {
                 lhs = try p.addNode(.{
                     .tag = Node.Tag.nd_mul,
@@ -513,13 +508,15 @@ fn parseMultiple(p: *Parser) !usize {
                     }),
                 });
             },
-            else => { return lhs; },
+            else => {
+                return lhs;
+            },
         }
     }
 }
 
 fn parseUnary(p: *Parser) Error!usize {
-    switch(p.currentTokenTag()){
+    switch (p.currentTokenTag()) {
         .tk_add => {
             _ = p.nextToken();
             return try p.parsePrimary();
@@ -541,8 +538,7 @@ fn parseUnary(p: *Parser) Error!usize {
 }
 
 fn parsePrimary(p: *Parser) Error!usize {
-    
-    switch(p.currentTokenTag()){
+    switch (p.currentTokenTag()) {
         .tk_num => {
             return try p.addNode(.{
                 .tag = .nd_num,
@@ -558,15 +554,41 @@ fn parsePrimary(p: *Parser) Error!usize {
         },
         .tk_identifier => {
             const main_token = p.nextToken();
-            if(p.currentTokenTag() == .tk_l_paren){
+            if (p.currentTokenTag() == .tk_l_paren) {
                 // function call
                 try p.expectToken(.tk_l_paren);
-                try p.expectToken(.tk_r_paren);
-                return try p.addNode(.{
-                    .tag = .nd_call_function,
-                    .main_token = main_token,
-                    .data = 0,
-                });
+
+                if (p.currentTokenTag() != .tk_r_paren) {
+                    // with params
+
+                    var params = std.ArrayList(usize).init(p.gpa);
+                    defer params.deinit();
+
+                    while (true) {
+                        try params.append(try p.parseExpr());
+                        if (p.currentTokenTag() != .tk_canma) {
+                            break;
+                        }
+                        _ = p.nextToken();
+                    }
+                    try p.expectToken(.tk_r_paren);
+
+                    const rng = try p.addExtraList(try params.toOwnedSlice());
+                    return p.addNode(.{
+                        .tag = .nd_call_fn_with_params,
+                        .main_token = main_token,
+                        .data = try p.addExtra(rng),
+                    });
+                } else {
+                    // no params
+
+                    try p.expectToken(.tk_r_paren);
+                    return try p.addNode(.{
+                        .tag = .nd_call_function,
+                        .main_token = main_token,
+                        .data = 0,
+                    });
+                }
             } else {
                 // variable
                 return try p.addNode(.{
@@ -594,5 +616,4 @@ const ExtraDataList = Ast.ExtraDataList;
 
 const TokenError = Tokenizer.TokenError;
 
-test "Parser test" {
-}
+test "Parser test" {}

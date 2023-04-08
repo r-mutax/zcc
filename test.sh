@@ -62,5 +62,10 @@ assert 5 "main(){a = 0; while(a < 5) a = a + 1; return a;}"
 assert 3 "main(){a = 0; for(a = 1; a < 3; a = a + 1) b = 0; return a;}"
 
 # function call
-assert 5 "funcA(){return 5;} main(){ return funcA(); }"
-assert 6 "funcA(abc, bcd){ return  19; } main(){ return 6; }"
+assert 4 "func0(){ return 4;} main(){ return func0();}"
+assert 5 "func1(a){ return a; } main() {return func1(5); }"
+assert 6 "func2(a, b){ return a + b;} main(){return func2(1, 5);}"
+assert 7 "func3(a, b, c){ return a + b + c;} main(){return func3(1, 5, 1);}"
+assert 9 "func4(a, b, c, d){ return a + b + c + d;} main(){return func4(1, 5, 1, 2);}"
+assert 12 "func5(a, b, c, d, e){ return a + b + c + d + e;} main(){return func5(1, 5, 2, 3, 1);}"
+assert 18 "func6(a, b, c, d, e, f){ return a + b + c + d + e + f;} main(){return func6(1, 5, 4, 5, 1, 2);}"
