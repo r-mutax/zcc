@@ -61,6 +61,9 @@ assert 5 "main(){a = 0; while(a < 5) a = a + 1; return a;}"
 # for statement
 assert 3 "main(){a = 0; for(a = 1; a < 3; a = a + 1) b = 0; return a;}"
 
+# blank statement
+assert 1 "main(){ ;;;;;;;; return 1; }"
+
 # function call
 assert 4 "func0(){ return 4;} main(){ return func0();}"
 assert 5 "func1(a){ return a; } main() {return func1(5); }"

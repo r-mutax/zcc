@@ -9,7 +9,7 @@
             "request": "launch",
             "name": "Debug",
             "program": "${workspaceFolder}/zig-out/bin/zcc",
-            "args": ["funcA(abc, bcd){ return  abc + bcd; } main(){ return funcA(3, 5); }"],
+            "args": ["main(){ ;;;;;return 9; }"],
             "cwd": "${workspaceFolder}"
         }
     ]
