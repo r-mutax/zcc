@@ -148,6 +148,14 @@ fn parseStmt(p: *Parser) !usize {
         .tk_while => try p.parseWhileStmt(),
         .tk_for => try p.parseForStmt(),
         .tk_l_brace => try p.parseCompoundStmt(),
+        .tk_semicoron => {
+            _ = p.nextToken();
+            return try p.addNode(.{
+                .tag = .nd_blank_stmt,
+                .main_token = 0,
+                .data = 0,
+            });
+        },
         else => {
             const lhs = try p.parseExpr();
             try p.expectToken(.tk_semicoron);

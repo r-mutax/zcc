@@ -166,6 +166,8 @@ pub const Node = struct {
         // pointer dereference
         nd_negation,
         // '-' primary
+        nd_blank_stmt,
+        // blank statement
     };
 
     pub const Range = struct {

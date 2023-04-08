@@ -227,6 +227,9 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             }
             try c.endScope();
         },
+        .nd_blank_stmt => {
+            return;
+        },
         else => try c.gen(node),
     }
 }
