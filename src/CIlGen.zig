@@ -255,6 +255,12 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_store_lvar_addr, @intCast(u32, i.offset), 0, @intCast(u32, i.size));
             return;
         },
+        .nd_dereference => {
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+
+            try c.gen(extra.lhs);
+            try c.addCil(.cil_load, 0, 0, 0);
+        },
         .nd_call_function => {
             try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0, 0);
             return;
@@ -472,6 +478,9 @@ pub const Cil = struct {
 
         cil_store_lvar_addr,
         // store local variable address
+
+        cil_load,
+        // load to rax from stack
 
     };
 

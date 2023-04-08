@@ -165,6 +165,10 @@ pub fn genAsm(a: *AsmGen) !void {
                 _ = try stdout.print("  lea rax, [rbp - {}]\n", .{cil.lhs});
                 _ = try stdout.writeAll("  push rax\n");
             },
+            Cil.Tag.cil_load => {
+                _ = try stdout.writeAll("  pop rax\n");
+                _ = try stdout.writeAll("  mov rax, [rax]\n");
+            },
         }
     }
 }

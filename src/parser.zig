@@ -546,7 +546,17 @@ fn parseUnary(p: *Parser) Error!usize {
                 .data = try p.addExtra(Node.Data{
                     .lhs = try p.parseUnary(),
                     .rhs = 0,
-                })
+                }),
+            });
+        },
+        .tk_mul => {
+            return p.addNode(.{
+                .tag = .nd_dereference,
+                .main_token = p.nextToken(),
+                .data = try p.addExtra(Node.Data{
+                    .lhs = try p.parseUnary(),
+                    .rhs = 0,
+                }),
             });
         },
         else => {

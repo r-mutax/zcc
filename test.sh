@@ -72,3 +72,6 @@ assert 7 "func3(a, b, c){ return a + b + c;} main(){return func3(1, 5, 1);}"
 assert 9 "func4(a, b, c, d){ return a + b + c + d;} main(){return func4(1, 5, 1, 2);}"
 assert 12 "func5(a, b, c, d, e){ return a + b + c + d + e;} main(){return func5(1, 5, 2, 3, 1);}"
 assert 18 "func6(a, b, c, d, e, f){ return a + b + c + d + e + f;} main(){return func6(1, 5, 4, 5, 1, 2);}"
+
+# address
+assert 5 "main(){ a = 10; b = &a; return *b - 5;}"

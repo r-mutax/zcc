@@ -162,7 +162,7 @@ pub const Node = struct {
         // condition expression
         nd_address,
         // address
-        nd_dreference,
+        nd_dereference,
         // pointer dereference
         nd_negation,
         // '-' primary
