@@ -3,47 +3,47 @@ const Tokenizer = @This();
 
 const expect = std.testing.expect;
 
-pub const TokenError = error {
+pub const TokenError = error{
     UnexpectedToken,
 };
 
 pub const Token = struct {
     pub const Tag = enum {
-        tk_add,                     // +
-        tk_sub,                     // -
-        tk_mul,                     // *
-        tk_div,                     // /
+        tk_add, // +
+        tk_sub, // -
+        tk_mul, // *
+        tk_div, // /
         tk_num,
         tk_eof,
         tk_invalid,
-        tk_l_paren,                 // (
-        tk_r_paren,                 // )
-        tk_incr,                    // ++
-        tk_decr,                    // --
-        tk_equal,                   // ==
-        tk_assign,                  // =
-        tk_not_equal,               // !=
-        tk_l_angle_bracket,         // <
-        tk_l_angle_bracket_equal,   // <=
-        tk_r_angle_bracket,         // >
-        tk_r_angle_bracket_equal,   // >=
-        tk_l_brace,                 // {
-        tk_r_brace,                 // }
-        tk_identifier, 
-        tk_semicoron,               // ;
-        tk_return,                  // return
-        tk_if,                      // if
-        tk_else,                    // else
-        tk_while,                   // while
-        tk_for,                     // for
-        tk_canma,                   // ,
-        tk_and,                     // &
-        tk_and_and,                 // &&
-        tk_pipe,                    // |
-        tk_pipe_pipe,               // ||
-        tk_hat,                     // ~
-        tk_question,                // ?
-        tk_coron,                   // :
+        tk_l_paren, // (
+        tk_r_paren, // )
+        tk_incr, // ++
+        tk_decr, // --
+        tk_equal, // ==
+        tk_assign, // =
+        tk_not_equal, // !=
+        tk_l_angle_bracket, // <
+        tk_l_angle_bracket_equal, // <=
+        tk_r_angle_bracket, // >
+        tk_r_angle_bracket_equal, // >=
+        tk_l_brace, // {
+        tk_r_brace, // }
+        tk_identifier,
+        tk_semicoron, // ;
+        tk_return, // return
+        tk_if, // if
+        tk_else, // else
+        tk_while, // while
+        tk_for, // for
+        tk_canma, // ,
+        tk_and, // &
+        tk_and_and, // &&
+        tk_pipe, // |
+        tk_pipe_pipe, // ||
+        tk_hat, // ~
+        tk_question, // ?
+        tk_coron, // :
     };
     pub const Loc = struct {
         start: usize,
@@ -58,7 +58,7 @@ pub const Token = struct {
         .{ "for", .tk_for },
     });
 
-    fn getKeywords(keyword: [] const u8) ?Token.Tag {
+    fn getKeywords(keyword: []const u8) ?Token.Tag {
         return keywords.get(keyword);
     }
 
@@ -66,11 +66,11 @@ pub const Token = struct {
     loc: Loc,
 };
 
-buffer: [:0] const u8,
+buffer: [:0]const u8,
 index: usize,
 
 pub fn init(buffer: [:0]const u8) Tokenizer {
-    return Tokenizer {
+    return Tokenizer{
         .buffer = buffer,
         .index = 0,
     };
@@ -110,11 +110,11 @@ pub fn next(self: *Tokenizer) Token {
         },
     };
 
-    var state : State = .start;
-    while(true) : (self.index += 1){
+    var state: State = .start;
+    while (true) : (self.index += 1) {
         const c = self.buffer[self.index];
-        switch(state) {
-            .start => switch(c){
+        switch (state) {
+            .start => switch (c) {
                 0 => {
                     break;
                 },
@@ -194,35 +194,35 @@ pub fn next(self: *Tokenizer) Token {
                 },
             },
             .identifier => {
-                switch(c) {
+                switch (c) {
                     'a'...'z', 'A'...'Z', '0'...'9', '_' => {},
                     else => {
-                        if(Token.getKeywords(self.buffer[result.loc.start..self.index])) |tag| {
+                        if (Token.getKeywords(self.buffer[result.loc.start..self.index])) |tag| {
                             result.tag = tag;
                         }
                         break;
-                    }
+                    },
                 }
             },
             .plus => {
-                switch(c){
+                switch (c) {
                     '+' => {
                         result.tag = .tk_incr;
                     },
                     else => {
                         result.tag = .tk_add;
-                    }
+                    },
                 }
                 break;
             },
             .minus => {
-                switch(c){
+                switch (c) {
                     '+' => {
                         result.tag = .tk_decr;
                     },
                     else => {
                         result.tag = .tk_sub;
-                    }
+                    },
                 }
                 break;
             },
@@ -235,8 +235,8 @@ pub fn next(self: *Tokenizer) Token {
                 break;
             },
             .int => {
-                switch(c){
-                    '0' ... '9' => {},
+                switch (c) {
+                    '0'...'9' => {},
                     else => break,
                 }
             },
@@ -261,7 +261,7 @@ pub fn next(self: *Tokenizer) Token {
                 break;
             },
             .equal => {
-                switch(c){
+                switch (c) {
                     '=' => {
                         result.tag = .tk_equal;
                         self.index += 1;
@@ -273,7 +273,7 @@ pub fn next(self: *Tokenizer) Token {
                 break;
             },
             .exclamation => {
-                switch(c) {
+                switch (c) {
                     '=' => {
                         result.tag = .tk_not_equal;
                         self.index += 1;
@@ -283,7 +283,7 @@ pub fn next(self: *Tokenizer) Token {
                 }
             },
             .l_angle_bracket => {
-                switch(c){
+                switch (c) {
                     '=' => {
                         result.tag = .tk_l_angle_bracket_equal;
                         self.index += 1;
@@ -292,11 +292,11 @@ pub fn next(self: *Tokenizer) Token {
                     else => {
                         result.tag = .tk_l_angle_bracket;
                         break;
-                    }
+                    },
                 }
             },
             .r_angle_bracket => {
-                switch(c){
+                switch (c) {
                     '=' => {
                         result.tag = .tk_r_angle_bracket_equal;
                         self.index += 1;
@@ -305,7 +305,7 @@ pub fn next(self: *Tokenizer) Token {
                     else => {
                         result.tag = .tk_r_angle_bracket;
                         break;
-                    }
+                    },
                 }
             },
             .semicoron => {
@@ -313,7 +313,7 @@ pub fn next(self: *Tokenizer) Token {
                 break;
             },
             .ampersand => {
-                switch(c){
+                switch (c) {
                     '&' => {
                         result.tag = .tk_and_and;
                         self.index += 1;
@@ -322,11 +322,11 @@ pub fn next(self: *Tokenizer) Token {
                     else => {
                         result.tag = .tk_and;
                         break;
-                    }
+                    },
                 }
             },
             .pipe => {
-                switch(c){
+                switch (c) {
                     '|' => {
                         result.tag = .tk_pipe_pipe;
                         self.index += 1;
@@ -335,7 +335,7 @@ pub fn next(self: *Tokenizer) Token {
                     else => {
                         result.tag = .tk_pipe;
                         break;
-                    }
+                    },
                 }
             },
             .hat => {
@@ -366,18 +366,18 @@ pub fn getNumValue(self: *Tokenizer, start: usize) u32 {
     return val;
 }
 
-pub fn getSlice(self: *Tokenizer, start: usize) [] const u8 {
+pub fn getSlice(self: *Tokenizer, start: usize) []const u8 {
     self.index = start;
     const token = self.next();
     return self.buffer[token.loc.start..token.loc.end];
 }
 
-pub fn getLine(self: *Tokenizer, start: usize) [] const u8 {
+pub fn getLine(self: *Tokenizer, start: usize) []const u8 {
     self.index = start;
 
-    while(true) : (self.index += 1){
+    while (true) : (self.index += 1) {
         const c = self.buffer[self.index];
-        switch(c){
+        switch (c) {
             '\n', 'r' => {
                 break;
             },
@@ -389,13 +389,12 @@ pub fn getLine(self: *Tokenizer, start: usize) [] const u8 {
 }
 
 test "tokenizer test" {
-    try testTokenize("+ +-- 323 * /a return", &.{ .tk_add, .tk_add, .tk_sub, .tk_sub, .tk_num, .tk_mul, .tk_div, .tk_identifier, .tk_return});
+    try testTokenize("+ +-- 323 * /a return", &.{ .tk_add, .tk_add, .tk_sub, .tk_sub, .tk_num, .tk_mul, .tk_div, .tk_identifier, .tk_return });
 }
-
 
 fn testTokenize(source: [:0]const u8, expected_token_tags: []const Token.Tag) !void {
     var tokenizer = Tokenizer.init(source);
-    for(expected_token_tags) |expected_token_tag| {
+    for (expected_token_tags) |expected_token_tag| {
         const token = tokenizer.next();
         try std.testing.expectEqual(expected_token_tag, token.tag);
     }

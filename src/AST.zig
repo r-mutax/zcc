@@ -48,7 +48,7 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
 
     parser.parse();
 
-    return Ast {
+    return Ast{
         .gpa = gpa,
         .source = source,
         .tokens = tokens.toOwnedSlice(),
@@ -58,7 +58,7 @@ pub fn parse(source: [:0]const u8, gpa: Allocator) !Ast {
     };
 }
 
-pub fn getNodeToken(ast: *Ast, idx: usize) []const u8{
+pub fn getNodeToken(ast: *Ast, idx: usize) []const u8 {
     const main_token = ast.nodes.items(.main_token)[idx];
     const tkidx = ast.tokens.items(.start)[main_token];
     var tokenizer = Tokenizer.init(ast.source);
@@ -82,14 +82,14 @@ pub fn getNodeExtra(ast: *Ast, idx: usize, comptime T: type) T {
     const extra_idx = ast.nodes.items(.data)[idx];
     const fields = std.meta.fields(T);
     var result: T = undefined;
-    inline for(fields, 0..) | field, i | {
+    inline for (fields, 0..) |field, i| {
         @field(result, field.name) = ast.extras[extra_idx + i];
     }
     return result;
 }
 
 pub fn getNodeExtraList(ast: *Ast, st: usize, en: usize) []const usize {
-    const result = ast.extras[st .. en];
+    const result = ast.extras[st..en];
     return result;
 }
 
@@ -105,66 +105,67 @@ pub const Node = struct {
 
     pub const Tag = enum {
         nd_program,
-            // 
+        //
         nd_fn_proto,
 
         nd_add,
-            // lhs + rhs
+        // lhs + rhs
         nd_sub,
-            // lhs - rhs
+        // lhs - rhs
         nd_mul,
-            // lhs * rhs
+        // lhs * rhs
         nd_div,
-            // lhs / rhs
+        // lhs / rhs
         nd_num,
-            // lhs
+        // lhs
         nd_equal,
-            // lhs == rhs
+        // lhs == rhs
         nd_not_equal,
-            // lhs != rhs
+        // lhs != rhs
         nd_gt,
-            // lhs < rhs
+        // lhs < rhs
         nd_ge,
-            // lhs <= rhs
+        // lhs <= rhs
         nd_assign,
-            // lhs = rhs
+        // lhs = rhs
         nd_lvar,
-            // local variable
+        // local variable
         nd_return,
-            // return statement
+        // return statement
         nd_if_simple,
-            // if statement
+        // if statement
         nd_if,
         nd_if_else,
-            // if statement and then block and else block
+        // if statement and then block and else block
         nd_while,
-            // while statement
+        // while statement
         nd_for,
-            // for statement
+        // for statement
         nd_block,
-            // block statement
+        // block statement
         nd_call_function,
-            // function call
+        // function call
+        nd_call_fn_with_params,
         nd_args,
-            // function arguments
+        // function arguments
         nd_bit_and,
-            // bitand
+        // bitand
         nd_bit_xor,
-            // bit-xor
+        // bit-xor
         nd_bit_or,
-            // bit-or
+        // bit-or
         nd_logic_and,
-            // logic and
+        // logic and
         nd_logic_or,
-            // logic or
+        // logic or
         nd_cond_expr,
-            // condition expression
+        // condition expression
         nd_address,
-            // address
+        // address
         nd_dreference,
-            // pointer dereference
+        // pointer dereference
         nd_negation,
-            // '-' primary
+        // '-' primary
     };
 
     pub const Range = struct {
@@ -195,15 +196,15 @@ pub const Node = struct {
     };
 
     pub const While = struct {
-        cond_expr : usize,
-        body_stmt : usize,
+        cond_expr: usize,
+        body_stmt: usize,
     };
 
     pub const For = struct {
-        init_expr : usize,
-        cond_expr : usize,
+        init_expr: usize,
+        cond_expr: usize,
         itr_expr: usize,
-        body_stmt : usize,
+        body_stmt: usize,
     };
 };
 
