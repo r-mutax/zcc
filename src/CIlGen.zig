@@ -246,6 +246,15 @@ fn gen(c: *CilGen, node: usize) !void {
             try c.addCil(.cil_load_lvar, @intCast(u32, i.offset), 0, @intCast(u32, i.size));
             return;
         },
+        .nd_address => {
+            const extra = c.ast.getNodeExtra(node, Node.Data);
+            const target = extra.lhs;
+            const ident = c.ast.getNodeToken(target);
+            const i = try c.searchIdent(ident);
+
+            try c.addCil(.cil_store_lvar_addr, @intCast(u32, i.offset), 0, @intCast(u32, i.size));
+            return;
+        },
         .nd_call_function => {
             try c.addCil(.cil_fn_call_noargs, @intCast(u32, node), 0, 0);
             return;
@@ -460,6 +469,9 @@ pub const Cil = struct {
 
         cil_fn_call_noargs,
         // calling function(lhs = token idx of func name)
+
+        cil_store_lvar_addr,
+        // store local variable address
 
     };
 
