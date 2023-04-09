@@ -8,6 +8,9 @@ pub const TokenList = std.MultiArrayList(struct {
     start: usize,
 });
 
+pub const ASTError = error{
+    UndefinedIdentifier,
+};
 gpa: Allocator,
 source: [:0]const u8,
 tokens: TokenList.Slice,
@@ -168,6 +171,8 @@ pub const Node = struct {
         // '-' primary
         nd_blank_stmt,
         // blank statement
+        nd_declar_lvar,
+        // local variable declaration
     };
 
     pub const Range = struct {

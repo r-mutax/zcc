@@ -67,7 +67,7 @@ fn addExtraList(p: *Parser, list: []const usize) !Node.Range {
 //          'while' '(' expr ')' stmt |
 //          'for' '(' expr ';' expr ';' expr ')' stmt |
 //          compound_statement
-// compound_statement = '{' stmt* '}'
+// compound_statement = '{' ( declaration | stmt )* '}'
 // expr = assignment
 // assignment = logicOr ("=" assignment)?
 // logicOr = logicAnd ("||" logicAnd)*
@@ -249,7 +249,11 @@ fn parseCompoundStmt(p: *Parser) Error!usize {
     defer stmts.deinit();
 
     while (p.currentTokenTag() != .tk_r_brace) {
-        try stmts.append(try p.parseStmt());
+        if (p.currentTokenTag() == .tk_int) {
+            try stmts.append(try p.parseDeclaration());
+        } else {
+            try stmts.append(try p.parseStmt());
+        }
     }
     _ = p.nextToken();
 
@@ -259,6 +263,22 @@ fn parseCompoundStmt(p: *Parser) Error!usize {
         .main_token = main_token,
         .data = try p.addExtra(rng),
     });
+}
+
+fn parseDeclaration(p: *Parser) Error!usize {
+    if (p.currentTokenTag() != .tk_int) {
+        return TokenError.UnexpectedToken;
+    }
+    _ = p.nextToken();
+
+    const decl = try p.addNode(.{
+        .tag = .nd_declar_lvar,
+        .main_token = p.nextToken(),
+        .data = 0,
+    });
+
+    try p.expectToken(.tk_semicoron);
+    return decl;
 }
 
 fn parseExpr(p: *Parser) !usize {

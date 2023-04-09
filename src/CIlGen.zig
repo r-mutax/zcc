@@ -3,6 +3,7 @@
 pub const CilList = std.MultiArrayList(CilGen.Cil);
 pub const IdentList = std.MultiArrayList(CilGen.Ident);
 pub const ScopeList = std.MultiArrayList(CilGen.Scope);
+pub const Error = Ast.ASTError || Allocator.Error;
 
 ast: Ast = undefined,
 gpa: Allocator,
@@ -72,7 +73,7 @@ fn endScope(c: *CilGen) !void {
     c.scpidx -= 1;
 }
 
-fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
+fn searchIdent(c: *CilGen, ident: []const u8) Error!Ident {
     var idx: usize = 0;
     while (idx <= c.scpidx) : (idx += 1) {
         var scope = c.scopes.get(c.scpidx - idx);
@@ -83,19 +84,20 @@ fn searchIdent(c: *CilGen, ident: []const u8) !Ident {
         }
     }
 
-    // not found ident
-    c.memory += 8;
-    const pos = c.idents.len;
-    try c.idents.append(c.gpa, .{
-        .tag = .local,
-        .size = 8,
-        .offset = c.memory,
-    });
-    var scope = c.scopes.get(c.scpidx);
-    try scope.identmap.put(ident, pos);
-    c.scopes.set(c.scpidx, scope);
+    return Error.UndefinedIdentifier;
+    // // not found ident
+    // c.memory += 8;
+    // const pos = c.idents.len;
+    // try c.idents.append(c.gpa, .{
+    //     .tag = .local,
+    //     .size = 8,
+    //     .offset = c.memory,
+    // });
+    // var scope = c.scopes.get(c.scpidx);
+    // try scope.identmap.put(ident, pos);
+    // c.scopes.set(c.scpidx, scope);
 
-    return c.idents.get(pos);
+    // return c.idents.get(pos);
 }
 
 pub fn getIdent(c: *CilGen, ino: usize) !Ident {
@@ -222,8 +224,20 @@ fn gen_stmt(c: *CilGen, node: usize) !void {
             const rng = c.ast.getNodeExtraList(extra.start, extra.end);
             try c.startScope();
             for (rng) |idx| {
-                try c.gen_stmt(idx);
-                try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
+                switch (c.ast.getNodeTag(idx)) {
+                    .nd_declar_lvar => {
+                        const ident = c.ast.getNodeToken(idx);
+                        _ = try c.appendIdent(ident, Ident{
+                            .tag = .local,
+                            .size = 8,
+                            .offset = c.memory + 8,
+                        });
+                    },
+                    else => {
+                        try c.gen_stmt(idx);
+                        try c.addCil(.cil_pop, @enumToInt(CilRegister.rax), 0, 0);
+                    },
+                }
             }
             try c.endScope();
         },
