@@ -104,6 +104,8 @@ fn parseProgram(p: *Parser) Error!usize {
 }
 
 fn parseFunction(p: *Parser) Error!usize {
+    try p.expectToken(.tk_int);
+
     const main_token = p.nextToken();
     try p.expectToken(.tk_l_paren);
 
